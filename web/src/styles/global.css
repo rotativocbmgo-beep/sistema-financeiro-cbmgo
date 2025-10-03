@@ -1,0 +1,4 @@
+﻿:root { --bg: #0f172a; --fg: #e2e8f0; --card: #111827; --accent: #22d3ee; }
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--bg); color: var(--fg); }
