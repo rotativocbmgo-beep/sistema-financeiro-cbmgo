@@ -22,3 +22,7 @@ pnpm-debug.log*
 # Arquivos de Sistema
 .DS_Store
 Thumbs.db
+
+# ... outras linhas
+/web/dist
+# ...
