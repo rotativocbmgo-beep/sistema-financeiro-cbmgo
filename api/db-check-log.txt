@@ -1,0 +1,13 @@
+--- INICIANDO DIAGNÓSTICO DE CONEXÃO COM O BANCO DE DADOS ---
+ℹ️  DATABASE_URL encontrada. Tentando conectar...
+ℹ️  Host detectado: localhost
+✅ SUCESSO: Conexão com o banco de dados estabelecida.
+✅ SUCESSO: Tabela "User" encontrada com 1 registro(s).
+------------------- AMOSTRA DE USUÁRIOS -------------------
+┌─────────┬───────────────────┬──────────────────────────┐
+│ (index) │ email             │ createdAt                │
+├─────────┼───────────────────┼──────────────────────────┤
+│ 0       │ 'admin@cbmgo.com' │ 2025-10-04T04:18:12.779Z │
+└─────────┴───────────────────┴──────────────────────────┘
+---------------------------------------------------------
+--- DIAGNÓSTICO FINALIZADO ---
