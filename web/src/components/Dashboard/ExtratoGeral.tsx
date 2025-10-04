@@ -5,7 +5,9 @@ import { ptBR } from 'date-fns/locale';
 import { api } from '../../services/api';
 import toast from 'react-hot-toast';
 import { Skeleton } from '../Skeleton';
+import { PencilSimple, Trash } from '@phosphor-icons/react';
 
+// --- Interfaces ---
 interface Lancamento {
   id: string;
   historico: string;
@@ -22,33 +24,53 @@ interface PaginationMeta {
   pageSize: number;
 }
 
+// --- Componente de Skeleton Responsivo ---
 function ExtratoSkeleton() {
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full">
-        <thead className="bg-gray-700">
-          <tr>
-            <th className="px-6 py-3 text-left"><Skeleton className="h-4 w-16" /></th>
-            <th className="px-6 py-3 text-left"><Skeleton className="h-4 w-40" /></th>
-            <th className="px-6 py-3 text-right"><Skeleton className="h-4 w-24 ml-auto" /></th>
-            <th className="px-6 py-3 text-center"><Skeleton className="h-4 w-20 mx-auto" /></th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-700">
-          {Array.from({ length: 10 }).map((_, index) => (
-            <tr key={index}>
-              <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
-              <td className="px-6 py-4"><Skeleton className="h-4 w-3/4" /></td>
-              <td className="px-6 py-4"><Skeleton className="h-4 w-28 ml-auto" /></td>
-              <td className="px-6 py-4"><Skeleton className="h-4 w-24 mx-auto" /></td>
+    <>
+      {/* Skeleton para Tabela (Desktop) */}
+      <div className="hidden md:block overflow-x-auto">
+        <table className="min-w-full">
+          <thead className="bg-gray-700">
+            <tr>
+              <th className="px-6 py-3 text-left"><Skeleton className="h-4 w-16" /></th>
+              <th className="px-6 py-3 text-left"><Skeleton className="h-4 w-40" /></th>
+              <th className="px-6 py-3 text-right"><Skeleton className="h-4 w-24 ml-auto" /></th>
+              <th className="px-6 py-3 text-center"><Skeleton className="h-4 w-20 mx-auto" /></th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody className="divide-y divide-gray-700">
+            {Array.from({ length: 10 }).map((_, index) => (
+              <tr key={index}>
+                <td className="px-6 py-4"><Skeleton className="h-4 w-20" /></td>
+                <td className="px-6 py-4"><Skeleton className="h-4 w-3/4" /></td>
+                <td className="px-6 py-4"><Skeleton className="h-4 w-28 ml-auto" /></td>
+                <td className="px-6 py-4"><Skeleton className="h-4 w-24 mx-auto" /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {/* Skeleton para Cards (Mobile) */}
+      <div className="md:hidden p-4 space-y-4">
+        {Array.from({ length: 5 }).map((_, index) => (
+            <div key={index} className="bg-gray-800 p-4 rounded-lg shadow-md animate-pulse">
+                <div className="flex justify-between items-center mb-3">
+                    <Skeleton className="h-6 w-2/5" />
+                    <Skeleton className="h-5 w-1/4" />
+                </div>
+                <div className="space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                </div>
+            </div>
+        ))}
+      </div>
+    </>
   );
 }
 
+// --- Componente Principal ---
 export function ExtratoGeral() {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
@@ -159,6 +181,7 @@ export function ExtratoGeral() {
 
   return (
     <div className="bg-gray-900 rounded-lg shadow-lg">
+      {/* --- Filtros --- */}
       <div className="p-4 bg-gray-800 rounded-t-lg flex flex-wrap items-end gap-4">
         <div className="flex-grow sm:flex-grow-0">
           <label htmlFor="dataInicio" className="block text-xs font-medium text-gray-300">Data Início</label>
@@ -188,42 +211,75 @@ export function ExtratoGeral() {
         </div>
       </div>
 
+      {/* --- Conteúdo (Tabela ou Cards) --- */}
       {loading ? <ExtratoSkeleton /> : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full w-full">
-            <thead className="bg-gray-700">
-              <tr>
-                <th scope="col" className="sticky top-0 z-10 bg-gray-700 px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Data</th>
-                <th scope="col" className="sticky top-0 z-10 bg-gray-700 px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Histórico</th>
-                <th scope="col" className="sticky top-0 z-10 bg-gray-700 px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">Valor</th>
-                <th scope="col" className="sticky top-0 z-10 bg-gray-700 px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-700">
-              {lancamentos.length > 0 ? lancamentos.map(lanc => (
-                <tr key={lanc.id} className="hover:bg-gray-800">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">{format(new Date(lanc.data), 'dd/MM/yyyy', { locale: ptBR })}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{lanc.historico}</td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-right text-sm font-mono font-bold ${lanc.tipo === 'CREDITO' ? 'text-green-400' : 'text-red-400'}`}>
-                    {lanc.tipo === 'CREDITO' ? '+ ' : '- '}
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(lanc.valor))}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
-                    {!lanc.processoId && (
-                      <div className="flex justify-center gap-4">
-                        <Link to={`/lancamentos/editar/${lanc.id}`} className="text-blue-400 hover:text-blue-600">Editar</Link>
-                        <button onClick={() => handleDelete(lanc.id)} className="text-red-400 hover:text-red-600">Excluir</button>
-                      </div>
-                    )}
-                  </td>
+        <>
+          {/* VISUALIZAÇÃO EM TABELA PARA DESKTOP */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="min-w-full w-full">
+              <thead className="bg-gray-700">
+                <tr>
+                  <th scope="col" className="sticky top-0 z-10 bg-gray-700 px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Data</th>
+                  <th scope="col" className="sticky top-0 z-10 bg-gray-700 px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Histórico</th>
+                  <th scope="col" className="sticky top-0 z-10 bg-gray-700 px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">Valor</th>
+                  <th scope="col" className="sticky top-0 z-10 bg-gray-700 px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">Ações</th>
                 </tr>
-              )) : (
-                <tr><td colSpan={4} className="text-center py-10 text-gray-500">Nenhum lançamento encontrado.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-gray-700">
+                {lancamentos.length > 0 ? lancamentos.map(lanc => (
+                  <tr key={lanc.id} className="hover:bg-gray-800">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">{format(new Date(lanc.data), 'dd/MM/yyyy', { locale: ptBR })}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{lanc.historico}</td>
+                    <td className={`px-6 py-4 whitespace-nowrap text-right text-sm font-mono font-bold ${lanc.tipo === 'CREDITO' ? 'text-green-400' : 'text-red-400'}`}>
+                      {lanc.tipo === 'CREDITO' ? '+ ' : '- '}
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(lanc.valor))}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
+                      {!lanc.processoId && (
+                        <div className="flex justify-center gap-4">
+                          <Link to={`/lancamentos/editar/${lanc.id}`} className="text-blue-400 hover:text-blue-600">Editar</Link>
+                          <button onClick={() => handleDelete(lanc.id)} className="text-red-400 hover:text-red-600">Excluir</button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                )) : (
+                  <tr><td colSpan={4} className="text-center py-10 text-gray-500">Nenhum lançamento encontrado.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* VISUALIZAÇÃO EM CARDS PARA MOBILE */}
+          <div className="md:hidden p-4 space-y-4">
+            {lancamentos.length > 0 ? lancamentos.map(lanc => (
+              <div key={lanc.id} className="bg-gray-800 p-4 rounded-lg shadow-md">
+                <div className="flex justify-between items-start mb-2">
+                  <span className="text-sm text-gray-400">{format(new Date(lanc.data), 'dd/MM/yyyy', { locale: ptBR })}</span>
+                  <span className={`font-mono font-bold text-lg ${lanc.tipo === 'CREDITO' ? 'text-green-400' : 'text-red-400'}`}>
+                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(lanc.valor))}
+                  </span>
+                </div>
+                <p className="text-base font-medium mb-3">{lanc.historico}</p>
+                {!lanc.processoId && (
+                  <div className="flex justify-end gap-4 border-t border-gray-700 pt-3">
+                    <Link to={`/lancamentos/editar/${lanc.id}`} className="flex items-center gap-1 text-blue-400 hover:text-blue-600">
+                      <PencilSimple size={16} /> Editar
+                    </Link>
+                    <button onClick={() => handleDelete(lanc.id)} className="flex items-center gap-1 text-red-400 hover:text-red-600">
+                      <Trash size={16} /> Excluir
+                    </button>
+                  </div>
+                )}
+              </div>
+            )) : (
+              <div className="text-center py-10 text-gray-500">Nenhum lançamento encontrado.</div>
+            )}
+          </div>
+        </>
       )}
+
+      {/* --- Paginação --- */}
       {meta && meta.totalPages > 1 && !loading && (
         <div className="bg-gray-700 px-4 py-3 flex items-center justify-between rounded-b-lg flex-wrap gap-2">
           <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg disabled:opacity-50 text-sm">Anterior</button>
