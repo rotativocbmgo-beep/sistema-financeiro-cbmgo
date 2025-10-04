@@ -2,17 +2,26 @@
 
 import { Router } from 'express';
 import { ensureAuthenticated } from '../middlewares/ensureAuthenticated';
-import { DashboardController } from '../controllers/DashboardController'; // 1. MUDE A IMPORTAÇÃO
+import { DashboardController } from '../controllers/DashboardController';
 
 const dashboardRoutes = Router();
-const dashboardController = new DashboardController(); // 2. CRIE A INSTÂNCIA DO NOVO CONTROLLER
+const dashboardController = new DashboardController();
 
-// Todas as rotas de dashboard precisam de autenticação
+// Todas as rotas aqui precisam de autenticação
 dashboardRoutes.use(ensureAuthenticated);
 
-// 3. APONTE AS ROTAS PARA OS MÉTODOS DO NOVO CONTROLLER
+// Rotas do Dashboard (Gráficos e Saldo)
 dashboardRoutes.get('/saldo', dashboardController.getSaldo);
 dashboardRoutes.get('/chart-data', dashboardController.getChartData);
 dashboardRoutes.get('/monthly-chart-data', dashboardController.getMonthlyChartData);
+
+// Rota de Lançamentos (CORREÇÃO PRINCIPAL)
+dashboardRoutes.get('/lancamentos', dashboardController.listLancamentos);
+dashboardRoutes.put('/lancamentos/:id', dashboardController.updateLancamento);
+dashboardRoutes.delete('/lancamentos/:id', dashboardController.deleteLancamento);
+
+// Rotas de Exportação
+dashboardRoutes.get('/export/csv', dashboardController.exportCSV);
+dashboardRoutes.get('/export/pdf', dashboardController.exportPDF);
 
 export default dashboardRoutes;
