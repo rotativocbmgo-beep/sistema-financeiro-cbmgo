@@ -1,6 +1,4 @@
-// api/src/services/AuthenticateUserService.ts
-
-import { compare } from 'bcrypt';
+import { compare } from 'bcryptjs'; // <-- MUDANÇA AQUI
 import { sign } from 'jsonwebtoken';
 import { prisma } from '../server';
 import authConfig from '../config/auth';
@@ -14,6 +12,7 @@ export class AuthenticateUserService {
       throw new Error('E-mail ou senha incorretos.');
     }
 
+    // A função compare continua a mesma
     const passwordMatched = await compare(password, user.password);
 
     if (!passwordMatched) {
@@ -22,22 +21,14 @@ export class AuthenticateUserService {
 
     const { secret, expiresIn } = authConfig.jwt;
 
-    // O payload com 'sub' está correto.
     const payload = {
       name: user.name,
       email: user.email,
       sub: user.id,
     };
 
-    // ====================================================================
-    // SOLUÇÃO FINAL: IGNORAR O ERRO DE TIPO
-    // ====================================================================
-    // Devido a uma incompatibilidade persistente nas definições de tipo
-    // da biblioteca, instruímos o TypeScript a ignorar o erro nesta linha.
-    // A funcionalidade está correta.
     // @ts-ignore
     const token = sign(payload, secret, { expiresIn });
-    // ====================================================================
 
     const userResponse = {
       id: user.id,

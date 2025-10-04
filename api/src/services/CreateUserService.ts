@@ -1,6 +1,4 @@
-// api/src/services/CreateUserService.ts
-
-import { hash } from 'bcrypt'; // <-- MUDANÇA AQUI
+import { hash } from 'bcryptjs'; // <-- MUDANÇA AQUI
 import { prisma } from '../server';
 import { IUser } from '../interfaces/IUser';
 
@@ -16,6 +14,7 @@ export class CreateUserService {
       throw new Error('Este e-mail já está em uso.');
     }
 
+    // A função hash continua a mesma, pois vem da biblioteca correta agora
     const hashedPassword = await hash(password, 8);
 
     const user = await prisma.user.create({

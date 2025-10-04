@@ -8,12 +8,12 @@ const processoController = new ProcessoController();
 processosRoutes.use(ensureAuthenticated);
 
 // Rotas para criar, listar e detalhar processos
-processosRoutes.post('/', processoController.create); // Usado em "Novo Pagamento"
-processosRoutes.get('/', processoController.list); // Usado na página "Processos"
+processosRoutes.post('/', processoController.create);
+processosRoutes.get('/', processoController.list);
 processosRoutes.get('/:id', processoController.getById);
 processosRoutes.patch('/:id/liquidar', processoController.liquidar);
 
-// Rota para criar uma reposição (crédito)
-processosRoutes.post('/reposicoes', processoController.createReposicao); // Usado em "Nova Reposição"
+// Rota DELETE adicionada
+processosRoutes.delete('/:id', processoController.delete);
 
 export default processosRoutes;

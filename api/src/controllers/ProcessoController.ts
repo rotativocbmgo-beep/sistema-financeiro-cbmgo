@@ -1,14 +1,11 @@
-// api/src/controllers/ProcessoController.ts
-
 import { Request, Response } from "express";
-import { TipoLancamento } from "@prisma/client";
 
 // --- Serviços ---
 import { CreateProcessoService } from "../services/CreateProcessoService";
 import { ListProcessosService } from "../services/ListProcessosService";
 import { GetProcessoService } from "../services/GetProcessoService";
 import { LiquidarProcessoService } from "../services/LiquidarProcessoService";
-import { CreateReposicaoService } from "../services/CreateReposicaoService";
+import { DeleteProcessoService } from "../services/DeleteProcessoService"; // Importação adicionada
 
 export class ProcessoController {
   // --- Métodos para Processos ---
@@ -29,12 +26,10 @@ export class ProcessoController {
   async list(request: Request, response: Response) {
     try {
       const { id: userId } = request.user;
-      // Extrai os parâmetros de paginação da query string da URL
       const { page, pageSize } = request.query;
       
       const listProcessosService = new ListProcessosService();
       
-      // Executa o serviço passando os parâmetros de paginação
       const resultado = await listProcessosService.execute({ 
         userId,
         page: page ? parseInt(String(page)) : undefined,
@@ -71,16 +66,15 @@ export class ProcessoController {
     }
   }
 
-  // --- Método para Reposição (Lançamento de Crédito) ---
-  async createReposicao(request: Request, response: Response) {
+  // --- MÉTODO DELETE ADICIONADO ---
+  async delete(request: Request, response: Response) {
     try {
       const { id: userId } = request.user;
-      const { data, historico, valor } = request.body;
-      const createReposicaoService = new CreateReposicaoService();
-      const reposicao = await createReposicaoService.execute({
-        data: new Date(data), historico, valor, userId,
-      });
-      return response.status(201).json(reposicao);
+      const { id } = request.params;
+      const deleteProcessoService = new DeleteProcessoService();
+      await deleteProcessoService.execute({ id, userId });
+      // Retorna 204 No Content, que é o padrão para exclusões bem-sucedidas
+      return response.status(204).send(); 
     } catch (error) {
       return response.status(400).json({ error: (error as Error).message });
     }

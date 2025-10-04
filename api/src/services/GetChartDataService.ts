@@ -1,50 +1,57 @@
 import { prisma } from "../server";
 import { TipoLancamento } from "@prisma/client";
+import { startOfDay, endOfDay } from 'date-fns';
 
-interface IGetChartDataRequest {
+interface IRequest {
   userId: string;
-  dataInicio?: string; // Parâmetro opcional
-  dataFim?: string;    // Parâmetro opcional
+  dataInicio?: string;
+  dataFim?: string;
+}
+
+interface ChartData {
+  name: string;
+  value: number;
 }
 
 export class GetChartDataService {
-  async execute({ userId, dataInicio, dataFim }: IGetChartDataRequest) {
-    // Constrói a cláusula 'where' dinamicamente
+  async execute({ userId, dataInicio, dataFim }: IRequest): Promise<ChartData[]> {
+    // 1. Monta a cláusula 'where' para a consulta
     const where: any = {
       userId,
-      tipo: TipoLancamento.DEBITO,
+      tipo: TipoLancamento.DEBITO, // Apenas despesas
     };
 
-    // Adiciona o filtro de data se os parâmetros forem fornecidos
     if (dataInicio || dataFim) {
       where.data = {};
       if (dataInicio) {
-        where.data.gte = new Date(dataInicio);
+        // Garante que o filtro comece no início do dia
+        where.data.gte = startOfDay(new Date(dataInicio));
       }
       if (dataFim) {
-        const fimDoDia = new Date(dataFim);
-        fimDoDia.setUTCHours(23, 59, 59, 999);
-        where.data.lte = fimDoDia;
+        // Garante que o filtro termine no final do dia
+        where.data.lte = endOfDay(new Date(dataFim));
       }
     }
 
-    const debitosAgrupados = await prisma.lancamento.groupBy({
-      by: ['historico'],
+    // 2. Usa a função 'groupBy' do Prisma para agrupar e somar
+    const despesasAgrupadas = await prisma.lancamento.groupBy({
+      by: ['historico'], // Agrupa pelo histórico da despesa
+      where,
       _sum: {
-        valor: true,
+        valor: true, // Soma os valores de cada grupo
       },
-      where, // Usa a cláusula 'where' construída
       orderBy: {
         _sum: {
-          valor: 'desc',
+          valor: 'desc', // Ordena pela soma, do maior para o menor
         },
       },
-      take: 5,
+      take: 5, // Pega apenas os 5 primeiros (Top 5)
     });
 
-    const chartData = debitosAgrupados.map(item => ({
+    // 3. Formata os dados para o formato que o gráfico espera
+    const chartData = despesasAgrupadas.map(item => ({
       name: item.historico,
-      value: Number(item._sum.valor),
+      value: Number(item._sum.valor) || 0,
     }));
 
     return chartData;

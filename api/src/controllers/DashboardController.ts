@@ -11,6 +11,7 @@ import { UpdateLancamentoService } from "../services/UpdateLancamentoService";
 import { DeleteLancamentoService } from "../services/DeleteLancamentoService";
 import { ExportLancamentosService } from "../services/ExportLancamentosService";
 import { ExportLancamentosPDFService } from "../services/ExportLancamentosPDFService";
+import { CreateReposicaoService } from "../services/CreateReposicaoService"; // Importado
 
 export class DashboardController {
   async getSaldo(request: Request, response: Response) {
@@ -18,9 +19,6 @@ export class DashboardController {
       const { id: userId } = request.user;
       const getSaldo = new GetSaldoService();
       const result = await getSaldo.execute({ userId });
-      
-      // CORREÇÃO: Garantir que sempre retornamos um objeto JSON válido
-      // O serviço retorna { saldo: number }, então passamos diretamente
       return response.status(200).json(result);
     } catch (error: any) {
       return response.status(400).json({ error: error.message });
@@ -29,20 +27,11 @@ export class DashboardController {
 
   async getTotalDespesas(request: Request, response: Response) {
     try {
-      // 1. Extrai o ID do usuário autenticado a partir do request.
       const { id: userId } = request.user;
-
-      // 2. Instancia o serviço responsável pela lógica de negócio.
       const getTotalDespesas = new GetTotalDespesasService();
-
-      // 3. Executa o serviço e aguarda o resultado.
       const result = await getTotalDespesas.execute({ userId });
-
-      // 4. CORREÇÃO: Retorna o resultado como JSON com status explícito 200.
-      // O serviço retorna { totalDespesas: number }, então passamos diretamente
       return response.status(200).json(result);
     } catch (error: any) {
-      // 5. Em caso de falha, retorna uma mensagem de erro.
       return response.status(400).json({ error: error.message });
     }
   }
@@ -79,8 +68,22 @@ export class DashboardController {
     }
   }
 
-  // --- MÉTODOS DE LANÇAMENTOS MOVIDOS PARA CÁ ---
+  // --- MÉTODO DE REPOSIÇÃO ADICIONADO AQUI ---
+  async createReposicao(request: Request, response: Response) {
+    try {
+      const { id: userId } = request.user;
+      const { data, historico, valor } = request.body;
+      const createReposicaoService = new CreateReposicaoService();
+      const reposicao = await createReposicaoService.execute({
+        data: new Date(data), historico, valor, userId,
+      });
+      return response.status(201).json(reposicao);
+    } catch (error) {
+      return response.status(400).json({ error: (error as Error).message });
+    }
+  }
 
+  // --- MÉTODOS DE LANÇAMENTOS ---
   async listLancamentos(request: Request, response: Response) {
     try {
       const { id: userId } = request.user;
@@ -127,6 +130,7 @@ export class DashboardController {
     }
   }
 
+  // --- MÉTODOS DE EXPORTAÇÃO ---
   async exportCSV(request: Request, response: Response) {
     try {
       const { id: userId } = request.user;

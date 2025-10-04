@@ -20,13 +20,13 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
 
-    /* --- ADICIONAR ESTAS LINHAS --- */
+    /* --- CONFIGURAÇÃO DOS ATALHOS (PATH ALIASES) --- */
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
     }
-    /* -------------------------------- */
+    /* ------------------------------------------------- */
   },
-  "include": ["src", "../api/src/services/GetTotalDespesasService.ts"],
+  "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

@@ -1,60 +1,93 @@
 import { prisma } from "../server";
 import { TipoLancamento } from "@prisma/client";
+import { startOfMonth, endOfMonth, eachMonthOfInterval, format } from 'date-fns';
 
-interface IGetMonthlyChartDataRequest {
+interface IRequest {
   userId: string;
-  dataInicio?: string; // Parâmetro opcional
-  dataFim?: string;    // Parâmetro opcional
+  dataInicio?: string;
+  dataFim?: string;
+}
+
+interface MonthlyData {
+  name: string; // Formato 'YYYY-MM'
+  receitas: number;
+  despesas: number;
 }
 
 export class GetMonthlyChartDataService {
-  async execute({ userId, dataInicio, dataFim }: IGetMonthlyChartDataRequest) {
-    // Constrói a cláusula 'where' dinamicamente
-    const where: any = {
-      userId,
-    };
+  async execute({ userId, dataInicio, dataFim }: IRequest): Promise<MonthlyData[]> {
+    // 1. Determinar o intervalo de datas para a consulta
+    let startDate: Date;
+    let endDate: Date;
 
-    // Adiciona o filtro de data
-    if (dataInicio || dataFim) {
-      where.data = {};
-      if (dataInicio) {
-        where.data.gte = new Date(dataInicio);
+    if (dataInicio && dataFim) {
+      startDate = startOfMonth(new Date(dataInicio));
+      endDate = endOfMonth(new Date(dataFim));
+    } else {
+      // Se não houver filtro, busca o primeiro e último lançamento do usuário
+      const firstLancamento = await prisma.lancamento.findFirst({
+        where: { userId },
+        orderBy: { data: 'asc' },
+      });
+      const lastLancamento = await prisma.lancamento.findFirst({
+        where: { userId },
+        orderBy: { data: 'desc' },
+      });
+
+      if (!firstLancamento) {
+        return []; // Se não há lançamentos, retorna um array vazio
       }
-      if (dataFim) {
-        const fimDoDia = new Date(dataFim);
-        fimDoDia.setUTCHours(23, 59, 59, 999);
-        where.data.lte = fimDoDia;
-      }
+
+      startDate = startOfMonth(firstLancamento.data);
+      endDate = lastLancamento ? endOfMonth(lastLancamento.data) : startOfMonth(new Date());
     }
 
-    const lancamentos = await prisma.lancamento.findMany({
-      where, // Usa a cláusula 'where' construída
-      orderBy: {
-        data: 'asc',
+    // 2. Buscar os dados agregados do banco de dados de uma só vez
+    const lancamentosAgregados = await prisma.lancamento.groupBy({
+      by: ['tipo', 'data'],
+      where: {
+        userId,
+        data: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      _sum: {
+        valor: true,
       },
     });
 
-    // Estrutura para agregar os dados por mês/ano
-    const monthlyData: { [key: string]: { creditos: number; debitos: number } } = {};
+    // 3. Criar um mapa com todos os meses do intervalo, inicializados com zero
+    const monthsInInterval = eachMonthOfInterval({ start: startDate, end: endDate });
+    const monthlyDataMap = new Map<string, MonthlyData>();
 
-    lancamentos.forEach(lancamento => {
-      const monthYear = lancamento.data.toISOString().substring(0, 7); // Formato "YYYY-MM"
-      if (!monthlyData[monthYear]) {
-        monthlyData[monthYear] = { creditos: 0, debitos: 0 };
+    for (const monthDate of monthsInInterval) {
+      const monthKey = format(monthDate, 'yyyy-MM');
+      monthlyDataMap.set(monthKey, {
+        name: monthKey,
+        receitas: 0,
+        despesas: 0,
+      });
+    }
+
+    // 4. Preencher o mapa com os dados agregados do banco
+    for (const lanc of lancamentosAgregados) {
+      const monthKey = format(lanc.data, 'yyyy-MM');
+      const monthData = monthlyDataMap.get(monthKey);
+
+      if (monthData) {
+        const valor = Number(lanc._sum.valor) || 0;
+        if (lanc.tipo === TipoLancamento.CREDITO) {
+          monthData.receitas += valor;
+        } else {
+          monthData.despesas += valor;
+        }
       }
-      if (lancamento.tipo === TipoLancamento.CREDITO) {
-        monthlyData[monthYear].creditos += Number(lancamento.valor);
-      } else {
-        monthlyData[monthYear].debitos += Number(lancamento.valor);
-      }
-    });
+    }
 
-    const chartData = Object.keys(monthlyData).map(monthYear => ({
-      name: monthYear,
-      creditos: monthlyData[monthYear].creditos,
-      debitos: monthlyData[monthYear].debitos,
-    }));
+    // 5. Converter o mapa para um array e ordenar por data
+    const result = Array.from(monthlyDataMap.values()).sort((a, b) => a.name.localeCompare(b.name));
 
-    return chartData;
+    return result;
   }
 }

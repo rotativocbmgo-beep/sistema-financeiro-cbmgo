@@ -1,12 +1,10 @@
-// web/src/components/Dashboard/Graficos.tsx
-
 import { useState, useCallback, useEffect } from 'react';
 import { format, subDays, subMonths, startOfYear } from 'date-fns';
-import { api } from '../../services/api';
+import { api } from '../../services/api'; // Caminho relativo correto
 import toast from 'react-hot-toast';
-import { DonutChart } from '../Charts/DonutChart';
-import { BarChart } from '../Charts/BarChart';
-import { Skeleton } from '../Skeleton';
+import { DonutChart } from '../Charts/DonutChart'; // Caminho relativo correto
+import { BarChart } from '../Charts/BarChart';   // Caminho relativo correto
+import { Skeleton } from '../Skeleton';           // Caminho relativo correto
 
 function GraficosSkeleton() {
   return (
@@ -31,8 +29,6 @@ export function Graficos() {
   const [dataInicioPersonalizada, setDataInicioPersonalizada] = useState('');
   const [dataFimPersonalizada, setDataFimPersonalizada] = useState('');
 
-  // CORREÇÃO: A função de busca agora é envolvida por useCallback com dependências corretas.
-  // Ela só será recriada se uma das datas personalizadas mudar.
   const fetchChartData = useCallback(async (dataInicio?: string, dataFim?: string) => {
     setLoading(true);
     try {
@@ -52,12 +48,10 @@ export function Graficos() {
     } finally {
       setLoading(false);
     }
-  }, []); // O array de dependências está vazio, pois a função em si não depende de nada externo.
+  }, []);
 
-  // CORREÇÃO: Este useEffect agora lida com a mudança de PERÍODOS PRÉ-DEFINIDOS.
   useEffect(() => {
     if (periodo === 'custom') {
-      // Se for custom, não faz nada, espera o clique no botão "Aplicar"
       return;
     }
 
@@ -68,7 +62,7 @@ export function Graficos() {
       case '30d': dataInicio = subDays(hoje, 30); break;
       case '6m': dataInicio = subMonths(hoje, 6); break;
       case '1y': dataInicio = startOfYear(hoje); break;
-      default: dataInicio = null; // 'all'
+      default: dataInicio = null;
     }
 
     const dataInicioFormatada = dataInicio ? format(dataInicio, 'yyyy-MM-dd') : undefined;
@@ -76,9 +70,8 @@ export function Graficos() {
 
     fetchChartData(dataInicioFormatada, dataFimFormatada);
 
-  }, [periodo, fetchChartData]); // Dispara apenas quando 'periodo' ou 'fetchChartData' mudam.
+  }, [periodo, fetchChartData]);
 
-  // CORREÇÃO: Nova função para lidar com o clique do filtro personalizado.
   const handleApplyCustomFilter = () => {
     if (!dataInicioPersonalizada || !dataFimPersonalizada) {
       toast.error('Por favor, selecione a data de início e fim.');
