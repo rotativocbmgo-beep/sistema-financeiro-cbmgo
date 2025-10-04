@@ -1,6 +1,6 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { Power, Gear, ChartBar, Bank, Files } from "@phosphor-icons/react";
+import { Power, Gear, ChartBar, Bank, Files, PlusCircle } from "@phosphor-icons/react";
 
 export function Sidebar() {
   const { user, logout } = useAuth();
@@ -38,6 +38,7 @@ export function Sidebar() {
           </NavLink>
         </nav>
 
+        {/* Botões de Ação para Desktop */}
         <div className="mt-6 px-4 space-y-2">
             <Link to="/reposicoes/nova" className="w-full flex justify-center bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 px-3 text-sm text-center rounded-lg">
               + Nova Reposição
