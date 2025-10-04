@@ -3,3 +3,50 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html {
+    /* Adiciona rolagem suave ao navegar por links internos */
+    scroll-behavior: smooth;
+    /* Garante que o conteúdo não fique escondido sob um cabeçalho fixo ao navegar para uma âncora */
+    scroll-padding-top: 6rem;
+  }
+
+  body {
+    /* Melhora a renderização das fontes em diferentes sistemas operacionais */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+
+    /* 
+      ======================================================================
+      == CORREÇÃO DA COR DO TEXTO PADRÃO ==
+      ======================================================================
+      Aplica a cor de fundo e a cor de texto padrão para toda a aplicação.
+      Isso resolve o problema de textos escuros em fundos escuros.
+    */
+    @apply bg-gray-800 text-gray-300;
+  }
+
+  /*
+    Melhora a acessibilidade do foco, mostrando o anel de foco apenas
+    para usuários de teclado, sem incomodar usuários de mouse.
+  */
+  :focus-visible {
+    outline: 2px solid theme('colors.cyan.400');
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Remove o outline padrão quando o :focus-visible está ativo */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* Garante que imagens e vídeos nunca "quebrem" o layout de seus contêineres */
+  img,
+  video,
+  svg {
+    max-width: 100%;
+    height: auto;
+  }
+}

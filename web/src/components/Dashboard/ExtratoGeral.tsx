@@ -6,7 +6,6 @@ import { api } from '../../services/api';
 import toast from 'react-hot-toast';
 import { Skeleton } from '../Skeleton';
 
-// --- Interfaces ---
 interface Lancamento {
   id: string;
   historico: string;
@@ -23,7 +22,6 @@ interface PaginationMeta {
   pageSize: number;
 }
 
-// --- Componente de Skeleton para a Tabela ---
 function ExtratoSkeleton() {
   return (
     <div className="overflow-x-auto">
@@ -83,23 +81,18 @@ export function ExtratoGeral() {
       dataFim: filtroDataFim || undefined,
       tipo: filtroTipo || undefined,
     };
-    if (currentPage !== 1) {
-      setCurrentPage(1);
-    } else {
-      fetchData(1, filtros);
-    }
-  }, [currentPage, filtroDataInicio, filtroDataFim, filtroTipo, fetchData]);
+    setCurrentPage(1);
+    fetchData(1, filtros);
+  }, [filtroDataInicio, filtroDataFim, filtroTipo, fetchData]);
 
   useEffect(() => {
-    // Este useEffect agora reage a mudanças nos filtros e na página atual
     const filtros = {
       dataInicio: filtroDataInicio || undefined,
       dataFim: filtroDataFim || undefined,
       tipo: filtroTipo || undefined,
     };
     fetchData(currentPage, filtros);
-  }, [currentPage, filtroDataInicio, filtroDataFim, filtroTipo, fetchData]);
-
+  }, [currentPage, fetchData]);
 
   const handleClearFilters = () => {
     setFiltroDataInicio('');
@@ -107,6 +100,8 @@ export function ExtratoGeral() {
     setFiltroTipo('');
     if (currentPage !== 1) {
       setCurrentPage(1);
+    } else {
+        fetchData(1, {});
     }
   };
 
@@ -115,13 +110,12 @@ export function ExtratoGeral() {
     try {
       await api.delete(`/lancamentos/${lancamentoId}`);
       toast.success("Lançamento excluído com sucesso!");
-      handleApplyFilters(); // Recarrega os dados com os filtros atuais
+      fetchData(currentPage, { dataInicio: filtroDataInicio, dataFim: filtroDataFim, tipo: filtroTipo });
     } catch (error: any) {
       toast.error(error.response?.data?.error || "Falha ao excluir o lançamento.");
     }
   }
 
-  // Função auxiliar para o download de arquivos
   const handleDownload = (data: BlobPart, fileName: string) => {
     const url = window.URL.createObjectURL(new Blob([data]));
     const link = document.createElement('a');
@@ -138,11 +132,11 @@ export function ExtratoGeral() {
     toast.loading('Gerando seu arquivo CSV...', { id: 'export-csv' });
     try {
       const filtros = { dataInicio: filtroDataInicio || undefined, dataFim: filtroDataFim || undefined, tipo: filtroTipo || undefined };
-      const response = await api.get('/processos/lancamentos/export/csv', { params: filtros, responseType: 'blob' });
+      const response = await api.get('/export/csv', { params: filtros, responseType: 'blob' });
       handleDownload(response.data, `extrato-${new Date().toISOString().slice(0, 10)}.csv`);
       toast.success('Download CSV iniciado!', { id: 'export-csv' });
     } catch (error) {
-      toast.error('Falha ao gerar o CSV. Verifique se há dados para exportar.', { id: 'export-csv' });
+      toast.error('Falha ao gerar o CSV.', { id: 'export-csv' });
     } finally {
       setIsExportingCSV(false);
     }
@@ -153,11 +147,11 @@ export function ExtratoGeral() {
     toast.loading('Gerando seu relatório PDF...', { id: 'export-pdf' });
     try {
       const filtros = { dataInicio: filtroDataInicio || undefined, dataFim: filtroDataFim || undefined, tipo: filtroTipo || undefined };
-      const response = await api.get('/processos/lancamentos/export/pdf', { params: filtros, responseType: 'blob' });
+      const response = await api.get('/export/pdf', { params: filtros, responseType: 'blob' });
       handleDownload(response.data, `relatorio-${new Date().toISOString().slice(0, 10)}.pdf`);
       toast.success('Download PDF iniciado!', { id: 'export-pdf' });
     } catch (error) {
-      toast.error('Falha ao gerar o PDF. Verifique se há dados para exportar.', { id: 'export-pdf' });
+      toast.error('Falha ao gerar o PDF.', { id: 'export-pdf' });
     } finally {
       setIsExportingPDF(false);
     }
@@ -166,61 +160,55 @@ export function ExtratoGeral() {
   return (
     <div className="bg-gray-900 rounded-lg shadow-lg">
       <div className="p-4 bg-gray-800 rounded-t-lg flex flex-wrap items-end gap-4">
-        <div>
-          <label htmlFor="dataInicio" className="block text-sm font-medium text-gray-300">Data Início</label>
+        <div className="flex-grow sm:flex-grow-0">
+          <label htmlFor="dataInicio" className="block text-xs font-medium text-gray-300">Data Início</label>
           <input type="date" id="dataInicio" value={filtroDataInicio} onChange={e => setFiltroDataInicio(e.target.value)} className="mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"/>
         </div>
-        <div>
-          <label htmlFor="dataFim" className="block text-sm font-medium text-gray-300">Data Fim</label>
+        <div className="flex-grow sm:flex-grow-0">
+          <label htmlFor="dataFim" className="block text-xs font-medium text-gray-300">Data Fim</label>
           <input type="date" id="dataFim" value={filtroDataFim} onChange={e => setFiltroDataFim(e.target.value)} className="mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm"/>
         </div>
-        <div>
-          <label htmlFor="tipo" className="block text-sm font-medium text-gray-300">Tipo</label>
+        <div className="flex-grow sm:flex-grow-0">
+          <label htmlFor="tipo" className="block text-xs font-medium text-gray-300">Tipo</label>
           <select id="tipo" value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)} className="mt-1 w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-sm">
             <option value="">Todos</option>
             <option value="CREDITO">Crédito</option>
             <option value="DEBITO">Débito</option>
           </select>
         </div>
-        <button onClick={handleApplyFilters} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg text-sm">Filtrar</button>
-        <button onClick={handleClearFilters} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg text-sm">Limpar</button>
-        <button 
-          onClick={handleExportCSV} 
-          disabled={isExportingCSV || isExportingPDF}
-          className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-sm disabled:opacity-50 disabled:cursor-wait"
-        >
-          {isExportingCSV ? '...' : 'Exportar CSV'}
-        </button>
-        <button 
-          onClick={handleExportPDF} 
-          disabled={isExportingPDF || isExportingCSV}
-          className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm disabled:opacity-50 disabled:cursor-wait"
-        >
-          {isExportingPDF ? '...' : 'Exportar PDF'}
-        </button>
+        <div className="flex flex-wrap gap-2">
+            <button onClick={handleApplyFilters} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg text-sm">Filtrar</button>
+            <button onClick={handleClearFilters} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg text-sm">Limpar</button>
+            <button onClick={handleExportCSV} disabled={isExportingCSV || isExportingPDF} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-sm disabled:opacity-50">
+            {isExportingCSV ? '...' : 'CSV'}
+            </button>
+            <button onClick={handleExportPDF} disabled={isExportingPDF || isExportingCSV} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm disabled:opacity-50">
+            {isExportingPDF ? '...' : 'PDF'}
+            </button>
+        </div>
       </div>
 
       {loading ? <ExtratoSkeleton /> : (
         <div className="overflow-x-auto">
-          <table className="min-w-full">
+          <table className="min-w-full w-full">
             <thead className="bg-gray-700">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Data</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Histórico</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">Valor</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">Ações</th>
+                <th scope="col" className="sticky top-0 z-10 bg-gray-700 px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Data</th>
+                <th scope="col" className="sticky top-0 z-10 bg-gray-700 px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Histórico</th>
+                <th scope="col" className="sticky top-0 z-10 bg-gray-700 px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">Valor</th>
+                <th scope="col" className="sticky top-0 z-10 bg-gray-700 px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700">
               {lancamentos.length > 0 ? lancamentos.map(lanc => (
                 <tr key={lanc.id} className="hover:bg-gray-800">
-                  <td className="px-6 py-4 text-sm text-gray-400">{format(new Date(lanc.data), 'dd/MM/yyyy', { locale: ptBR })}</td>
-                  <td className="px-6 py-4 text-sm font-medium">{lanc.historico}</td>
-                  <td className={`px-6 py-4 text-right text-sm font-mono font-bold ${lanc.tipo === 'CREDITO' ? 'text-green-400' : 'text-red-400'}`}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">{format(new Date(lanc.data), 'dd/MM/yyyy', { locale: ptBR })}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{lanc.historico}</td>
+                  <td className={`px-6 py-4 whitespace-nowrap text-right text-sm font-mono font-bold ${lanc.tipo === 'CREDITO' ? 'text-green-400' : 'text-red-400'}`}>
                     {lanc.tipo === 'CREDITO' ? '+ ' : '- '}
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(lanc.valor))}
                   </td>
-                  <td className="px-6 py-4 text-center text-sm">
+                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
                     {!lanc.processoId && (
                       <div className="flex justify-center gap-4">
                         <Link to={`/lancamentos/editar/${lanc.id}`} className="text-blue-400 hover:text-blue-600">Editar</Link>
@@ -237,10 +225,10 @@ export function ExtratoGeral() {
         </div>
       )}
       {meta && meta.totalPages > 1 && !loading && (
-        <div className="bg-gray-700 px-6 py-3 flex items-center justify-between rounded-b-lg">
-          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg disabled:opacity-50">Anterior</button>
-          <span className="text-sm text-gray-300">Página {meta.currentPage} de {meta.totalPages}</span>
-          <button onClick={() => setCurrentPage(p => Math.min(meta.totalPages, p + 1))} disabled={currentPage === meta.totalPages} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg disabled:opacity-50">Próxima</button>
+        <div className="bg-gray-700 px-4 py-3 flex items-center justify-between rounded-b-lg flex-wrap gap-2">
+          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg disabled:opacity-50 text-sm">Anterior</button>
+          <span className="text-xs sm:text-sm text-gray-300">Página {meta.currentPage} de {meta.totalPages}</span>
+          <button onClick={() => setCurrentPage(p => Math.min(meta.totalPages, p + 1))} disabled={currentPage === meta.totalPages} className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg disabled:opacity-50 text-sm">Próxima</button>
         </div>
       )}
     </div>

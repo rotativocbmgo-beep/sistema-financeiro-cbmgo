@@ -2,13 +2,26 @@
 
 /** @type {import('tailwindcss').Config} */
 export default {
-  // Informa ao Tailwind para procurar classes em todos os arquivos .jsx e .tsx
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    // Adiciona um breakpoint para telas extra pequenas
+    screens: {
+      'xs': '475px',
+      // Mantém os breakpoints padrão do Tailwind
+      ...require('tailwindcss/defaultTheme').screens,
+    },
+    extend: {
+      // Você pode estender cores, fontes, etc., aqui no futuro.
+    },
+  },
+  // Centraliza a classe 'container' por padrão
+  corePlugins: {
+    container: {
+      center: true,
+    },
   },
   plugins: [],
 }
