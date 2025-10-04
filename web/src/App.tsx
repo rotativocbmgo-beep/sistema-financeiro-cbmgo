@@ -1,36 +1,21 @@
 ﻿import { BrowserRouter } from 'react-router-dom';
 import { Router } from './Router';
 import { AuthProvider } from './contexts/AuthContext';
-import { Toaster } from 'react-hot-toast'; // 1. Importar o Toaster
+import { LayoutProvider } from './contexts/LayoutContext'; // 1. Importar
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Router />
-        {/* 2. Adicionar o componente Toaster aqui */}
+        {/* 2. Envolver o Router com o LayoutProvider */}
+        <LayoutProvider>
+          <Router />
+        </LayoutProvider>
         <Toaster
           position="top-right"
           toastOptions={{
-            className: '',
-            style: {
-              background: '#333',
-              color: '#fff',
-            },
-            success: {
-              duration: 3000,
-              iconTheme: {
-                primary: 'green',
-                secondary: 'white',
-              },
-            },
-            error: {
-              duration: 5000,
-              iconTheme: {
-                primary: 'red',
-                secondary: 'white',
-              },
-            },
+            // ... suas opções de toast
           }}
         />
       </AuthProvider>

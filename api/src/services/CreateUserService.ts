@@ -1,6 +1,8 @@
-import { hash } from 'bcryptjs';
+// api/src/services/CreateUserService.ts
+
+import { hash } from 'bcrypt'; // <-- MUDANÇA AQUI
 import { prisma } from '../server';
-import { IUser } from '../interfaces/IUser'; // A importação agora funciona
+import { IUser } from '../interfaces/IUser';
 
 export class CreateUserService {
   async execute({ name, email, password }: IUser) {
@@ -8,7 +10,6 @@ export class CreateUserService {
       throw new Error('A senha é obrigatória.');
     }
 
-    // O comando 'npx prisma generate' corrige o erro aqui.
     const userExists = await prisma.user.findUnique({ where: { email } });
 
     if (userExists) {
@@ -17,7 +18,6 @@ export class CreateUserService {
 
     const hashedPassword = await hash(password, 8);
 
-    // E aqui também.
     const user = await prisma.user.create({
       data: {
         name,
@@ -26,7 +26,7 @@ export class CreateUserService {
       },
     });
 
-    // Retorna o usuário sem a senha
+    // @ts-ignore
     const { password: _, ...userWithoutPassword } = user;
     return userWithoutPassword;
   }

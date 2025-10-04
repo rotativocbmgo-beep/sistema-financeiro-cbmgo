@@ -1,10 +1,9 @@
-// api/src/controllers/DashboardController.ts
-
 import { Request, Response } from "express";
 import { TipoLancamento } from "@prisma/client";
 
-// Importação dos Serviços
+// Serviços
 import { GetSaldoService } from "../services/GetSaldoService";
+import { GetTotalDespesasService } from "../services/GetTotalDespesasService";
 import { GetChartDataService } from "../services/GetChartDataService";
 import { GetMonthlyChartDataService } from "../services/GetMonthlyChartDataService";
 import { ListLancamentosService } from "../services/ListLancamentosService";
@@ -14,14 +13,36 @@ import { ExportLancamentosService } from "../services/ExportLancamentosService";
 import { ExportLancamentosPDFService } from "../services/ExportLancamentosPDFService";
 
 export class DashboardController {
-  // --- Métodos para o Dashboard ---
   async getSaldo(request: Request, response: Response) {
     try {
       const { id: userId } = request.user;
       const getSaldo = new GetSaldoService();
-      const saldo = await getSaldo.execute({ userId });
-      return response.json(saldo);
+      const result = await getSaldo.execute({ userId });
+      
+      // CORREÇÃO: Garantir que sempre retornamos um objeto JSON válido
+      // O serviço retorna { saldo: number }, então passamos diretamente
+      return response.status(200).json(result);
     } catch (error: any) {
+      return response.status(400).json({ error: error.message });
+    }
+  }
+
+  async getTotalDespesas(request: Request, response: Response) {
+    try {
+      // 1. Extrai o ID do usuário autenticado a partir do request.
+      const { id: userId } = request.user;
+
+      // 2. Instancia o serviço responsável pela lógica de negócio.
+      const getTotalDespesas = new GetTotalDespesasService();
+
+      // 3. Executa o serviço e aguarda o resultado.
+      const result = await getTotalDespesas.execute({ userId });
+
+      // 4. CORREÇÃO: Retorna o resultado como JSON com status explícito 200.
+      // O serviço retorna { totalDespesas: number }, então passamos diretamente
+      return response.status(200).json(result);
+    } catch (error: any) {
+      // 5. Em caso de falha, retorna uma mensagem de erro.
       return response.status(400).json({ error: error.message });
     }
   }
@@ -36,7 +57,7 @@ export class DashboardController {
         dataInicio: dataInicio ? String(dataInicio) : undefined,
         dataFim: dataFim ? String(dataFim) : undefined,
       });
-      return response.json(data);
+      return response.status(200).json(data);
     } catch (error: any) {
       return response.status(400).json({ error: error.message });
     }
@@ -52,13 +73,14 @@ export class DashboardController {
         dataInicio: dataInicio ? String(dataInicio) : undefined,
         dataFim: dataFim ? String(dataFim) : undefined,
       });
-      return response.json(data);
+      return response.status(200).json(data);
     } catch (error: any) {
       return response.status(400).json({ error: error.message });
     }
   }
-  
-  // --- Métodos para Lançamentos ---
+
+  // --- MÉTODOS DE LANÇAMENTOS MOVIDOS PARA CÁ ---
+
   async listLancamentos(request: Request, response: Response) {
     try {
       const { id: userId } = request.user;
@@ -73,8 +95,8 @@ export class DashboardController {
         tipo: tipo ? (String(tipo).toUpperCase() as TipoLancamento) : undefined,
       });
       return response.status(200).json(resultado);
-    } catch (error: any) {
-      return response.status(400).json({ error: error.message });
+    } catch (error) {
+      return response.status(400).json({ error: (error as Error).message });
     }
   }
 
@@ -88,8 +110,8 @@ export class DashboardController {
         id, userId, data: data ? new Date(data) : undefined, historico, valor,
       });
       return response.status(200).json(lancamento);
-    } catch (error: any) {
-      return response.status(400).json({ error: error.message });
+    } catch (error) {
+      return response.status(400).json({ error: (error as Error).message });
     }
   }
 
@@ -100,17 +122,15 @@ export class DashboardController {
       const deleteLancamentoService = new DeleteLancamentoService();
       await deleteLancamentoService.execute({ id, userId });
       return response.status(204).send();
-    } catch (error: any) {
-      return response.status(400).json({ error: error.message });
+    } catch (error) {
+      return response.status(400).json({ error: (error as Error).message });
     }
   }
 
-  // --- Métodos para Exportação ---
   async exportCSV(request: Request, response: Response) {
     try {
       const { id: userId } = request.user;
       const { dataInicio, dataFim, tipo } = request.query;
-      
       const exportService = new ExportLancamentosService();
       const csv = await exportService.execute({
         userId,
@@ -118,13 +138,12 @@ export class DashboardController {
         dataFim: dataFim ? String(dataFim) : undefined,
         tipo: tipo ? (String(tipo).toUpperCase() as TipoLancamento) : undefined,
       });
-
       const fileName = `extrato-${new Date().toISOString().split('T')[0]}.csv`;
       response.setHeader('Content-Type', 'text/csv; charset=utf-8');
       response.setHeader("Content-Disposition", `attachment; filename=${fileName}`);
       response.status(200).send('\uFEFF' + csv);
-    } catch (error: any) {
-      return response.status(400).json({ error: error.message });
+    } catch (error) {
+      return response.status(400).json({ error: (error as Error).message });
     }
   }
 
@@ -132,7 +151,6 @@ export class DashboardController {
     try {
       const { id: userId } = request.user;
       const { dataInicio, dataFim, tipo } = request.query;
-      
       const exportService = new ExportLancamentosPDFService();
       const pdfBuffer = await exportService.execute({
         userId,
@@ -140,13 +158,12 @@ export class DashboardController {
         dataFim: dataFim ? String(dataFim) : undefined,
         tipo: tipo ? (String(tipo).toUpperCase() as TipoLancamento) : undefined,
       });
-
       const fileName = `relatorio-financeiro-${new Date().toISOString().split('T')[0]}.pdf`;
       response.setHeader('Content-Type', 'application/pdf');
       response.setHeader("Content-Disposition", `attachment; filename=${fileName}`);
       response.status(200).send(pdfBuffer);
-    } catch (error: any) {
-      return response.status(400).json({ error: error.message });
+    } catch (error) {
+      return response.status(400).json({ error: (error as Error).message });
     }
   }
 }

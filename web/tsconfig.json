@@ -27,6 +27,6 @@
     }
     /* -------------------------------- */
   },
-  "include": ["src"],
+  "include": ["src", "../api/src/services/GetTotalDespesasService.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

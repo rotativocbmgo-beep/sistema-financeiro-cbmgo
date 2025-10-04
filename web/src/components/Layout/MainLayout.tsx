@@ -1,9 +1,8 @@
-// src/components/Layout/MainLayout.tsx
-
 import { ReactNode, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
-import { BottomNav } from './BottomNav'; // 1. Importar o novo componente
+import { BottomNav } from './BottomNav';
+import { useLayout } from '../../contexts/LayoutContext';
 import { Plus, X } from '@phosphor-icons/react';
 
 interface MainLayoutProps {
@@ -11,23 +10,24 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
+  const { pageTitle } = useLayout();
   const [isFabMenuOpen, setIsFabMenuOpen] = useState(false);
 
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[280px_1fr]">
       {/* --- Sidebar para Desktop --- */}
+      {/* CORREÇÃO: Adicionadas as classes de borda vertical aqui */}
       <div className="hidden border-r border-gray-700 bg-gray-900 md:block">
         <Sidebar />
       </div>
 
       <div className="flex flex-col">
-        {/* --- Cabeçalho para Desktop (Opcional, pode ser removido se não for usado) --- */}
-        <header className="hidden h-14 items-center gap-4 border-b border-gray-700 bg-gray-900 px-6 md:flex">
-          {/* Pode adicionar breadcrumbs ou título da página aqui no futuro */}
+        {/* --- Cabeçalho para Desktop --- */}
+        <header className="hidden h-16 items-center border-b border-gray-700 bg-gray-900 px-6 md:flex">
+          <h1 className="text-xl font-semibold text-gray-200">{pageTitle}</h1>
         </header>
 
         {/* --- Conteúdo Principal --- */}
-        {/* Adicionado padding-bottom para não sobrepor o BottomNav */}
         <main className="flex-1 overflow-y-auto bg-gray-800 p-4 pb-24 sm:p-6 md:pb-8 lg:p-8">
           {children}
         </main>
@@ -37,7 +37,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       <div className="md:hidden">
         <BottomNav />
 
-        {/* Menu de Ação Flutuante (FAB - Floating Action Button) */}
+        {/* Menu de Ação Flutuante (FAB) */}
         <div className="fixed bottom-20 right-4 z-50">
           {isFabMenuOpen && (
             <div className="mb-4 flex flex-col items-end gap-3">
@@ -54,7 +54,6 @@ export function MainLayout({ children }: MainLayoutProps) {
             className="flex h-14 w-14 items-center justify-center rounded-full bg-purple-600 text-white shadow-xl transition-transform duration-300 hover:bg-purple-700 active:scale-95"
             aria-label="Abrir menu de ações"
           >
-            {/* Animação do ícone de '+' para 'X' */}
             <Plus size={28} className={`absolute transition-all duration-300 ${isFabMenuOpen ? 'rotate-45 scale-0' : 'rotate-0 scale-100'}`} />
             <X size={28} className={`absolute transition-all duration-300 ${isFabMenuOpen ? 'rotate-0 scale-100' : '-rotate-45 scale-0'}`} />
           </button>

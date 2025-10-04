@@ -6,6 +6,7 @@ import { api } from '../../services/api';
 import toast from 'react-hot-toast';
 import { Skeleton } from '../Skeleton';
 import { PencilSimple, Trash } from '@phosphor-icons/react';
+import { useLayout } from '../../contexts/LayoutContext'; // 1. IMPORTAR O HOOK
 
 // --- Interfaces ---
 interface Lancamento {
@@ -72,6 +73,7 @@ function ExtratoSkeleton() {
 
 // --- Componente Principal ---
 export function ExtratoGeral() {
+  const { setPageTitle } = useLayout(); // 2. OBTER A FUNÇÃO
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -81,6 +83,11 @@ export function ExtratoGeral() {
   const [filtroTipo, setFiltroTipo] = useState('');
   const [isExportingCSV, setIsExportingCSV] = useState(false);
   const [isExportingPDF, setIsExportingPDF] = useState(false);
+
+  // 3. DEFINIR O TÍTULO DA PÁGINA
+  useEffect(() => {
+    setPageTitle("Extrato Geral");
+  }, [setPageTitle]);
 
   const fetchData = useCallback((page: number, filtros: object) => {
     setLoading(true);

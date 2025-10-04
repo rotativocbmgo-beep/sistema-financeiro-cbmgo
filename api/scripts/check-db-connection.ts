@@ -14,15 +14,11 @@ async function checkDatabase() {
 
   console.log('ℹ️  DATABASE_URL encontrada. Tentando conectar...');
 
-  // Extrai o host para feedback, tratando possíveis erros de URL inválida
   let host = 'N/A';
   try {
     const url = new URL(databaseUrl);
     host = url.hostname;
     console.log(`ℹ️  Host detectado: ${host}`);
-    if (host.includes('neon.tech')) {
-      console.log('ℹ️  Conexão com Neon.tech detectada. SSL será utilizado.');
-    }
   } catch (e) {
     console.warn('⚠️  Aviso: Não foi possível parsear a DATABASE_URL para extrair o host.');
   }
@@ -36,11 +32,9 @@ async function checkDatabase() {
   });
 
   try {
-    // 1. Testa a conexão básica
     await prisma.$queryRaw`SELECT now()`;
     console.log('✅ SUCESSO: Conexão com o banco de dados estabelecida.');
 
-    // 2. Verifica a existência e o conteúdo da tabela de usuários
     const users = await prisma.user.findMany({
       select: {
         email: true,

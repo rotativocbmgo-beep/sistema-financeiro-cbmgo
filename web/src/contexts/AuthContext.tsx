@@ -1,4 +1,6 @@
-﻿import { createContext, useState, useContext, useEffect, useCallback, ReactNode } from 'react';
+﻿// web/src/contexts/AuthContext.tsx
+
+import { createContext, useState, useContext, useEffect, useCallback, ReactNode } from 'react';
 import { api } from '../services/api';
 
 interface User {
@@ -12,7 +14,6 @@ interface AuthState {
   token: string | null;
 }
 
-// Tipagem para as credenciais de login
 interface LoginCredentials {
   email: string;
   password: string;
@@ -34,19 +35,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const user = localStorage.getItem('@CbmgoFinanceiro:user');
 
     if (token && user) {
+      // --- ESTA É A CORREÇÃO CRÍTICA ---
+      // Configura o cabeçalho do axios imediatamente ao carregar a aplicação,
+      // de forma síncrona, antes que qualquer outra chamada de API seja feita.
       api.defaults.headers.common.authorization = `Bearer ${token}`;
+      
       return { token, user: JSON.parse(user) };
     }
 
     return { token: null, user: null };
   });
+
+  // Este estado de loading agora é apenas para a tela inicial, se necessário.
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Como a verificação agora é síncrona na inicialização do useState,
+    // podemos remover o estado de loading rapidamente.
     setLoading(false);
   }, []);
 
-  // CORREÇÃO: Adicionada a tipagem explícita para 'credentials'
   const login = useCallback(async (credentials: LoginCredentials) => {
     const response = await api.post('/sessions', credentials);
     const { user, token } = response.data;

@@ -1,6 +1,5 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-// CORREÇÃO: O ícone 'PlusCircle' foi removido desta linha de importação.
 import { Power, Gear, ChartBar, Bank, Files } from "@phosphor-icons/react";
 
 export function Sidebar() {
@@ -17,6 +16,7 @@ export function Sidebar() {
 
   return (
     <div className="flex h-full max-h-screen flex-col gap-2 bg-gray-900">
+      {/* CORREÇÃO: A borda inferior foi adicionada de volta aqui */}
       <div className="flex h-16 items-center border-b border-gray-700 px-6">
         <Link to="/" className="flex items-center gap-2 font-semibold text-white">
           <Bank size={24} className="text-cyan-400" />
@@ -39,7 +39,6 @@ export function Sidebar() {
           </NavLink>
         </nav>
 
-        {/* Botões de Ação para Desktop */}
         <div className="mt-6 px-4 space-y-2">
             <Link to="/reposicoes/nova" className="w-full flex justify-center bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 px-3 text-sm text-center rounded-lg">
               + Nova Reposição
