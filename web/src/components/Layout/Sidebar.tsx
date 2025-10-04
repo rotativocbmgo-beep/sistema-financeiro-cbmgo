@@ -1,6 +1,7 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { Power, Gear, ChartBar, Bank, Files, PlusCircle } from "@phosphor-icons/react";
+// CORREÇÃO: O ícone 'PlusCircle' foi removido desta linha de importação.
+import { Power, Gear, ChartBar, Bank, Files } from "@phosphor-icons/react";
 
 export function Sidebar() {
   const { user, logout } = useAuth();
