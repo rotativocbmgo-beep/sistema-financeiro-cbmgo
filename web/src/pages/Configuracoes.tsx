@@ -1,10 +1,9 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState, ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../services/api";
 import toast from "react-hot-toast";
-import Input from "../components/Input"; // Reutilizando nosso componente de Input
+import Input from "../components/Input";
 
-// Interface para tipar os dados das configurações
 interface UserSettings {
   companyName: string;
   cnpj: string;
@@ -16,13 +15,17 @@ export function Configuracoes() {
   const [settings, setSettings] = useState<Partial<UserSettings>>({});
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
 
-  // Efeito para buscar os dados quando o componente é montado
   useEffect(() => {
     setLoading(true);
     api.get('/settings')
       .then(response => {
         setSettings(response.data);
+        if (response.data.logoUrl) {
+          setLogoPreview(response.data.logoUrl);
+        }
       })
       .catch(err => {
         console.error("Erro ao buscar configurações:", err);
@@ -31,29 +34,55 @@ export function Configuracoes() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Função para lidar com a atualização dos campos do formulário
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setSettings(prev => ({ ...prev, [name]: value }));
   };
 
-  // Função para enviar o formulário
+  const handleLogoChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setLogoFile(file);
+      const previewUrl = URL.createObjectURL(file);
+      setLogoPreview(previewUrl);
+    }
+  };
+
   async function handleUpdateSettings(event: FormEvent) {
     event.preventDefault();
     setIsSubmitting(true);
-    toast.loading('Salvando alterações...', { id: 'update-settings' });
+    
+    const updateToastId = 'update-settings';
+    toast.loading('Salvando alterações...', { id: updateToastId });
 
     try {
-      const response = await api.put('/settings', {
+      // Salva os dados de texto (continua como PUT, pois atualiza múltiplos campos)
+      const textResponse = await api.put('/settings', {
         companyName: settings.companyName,
         cnpj: settings.cnpj,
         address: settings.address,
       });
-      setSettings(response.data); // Atualiza o estado com os dados retornados
-      toast.success('Configurações salvas com sucesso!', { id: 'update-settings' });
+      
+      if (logoFile) {
+        const formData = new FormData();
+        formData.append('logo', logoFile);
+        
+        // CORREÇÃO: Alterar de api.put() para api.patch()
+        const logoResponse = await api.patch('/settings/logo', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+
+        setSettings(logoResponse.data);
+        setLogoPreview(logoResponse.data.logoUrl);
+        setLogoFile(null);
+      } else {
+        setSettings(textResponse.data);
+      }
+
+      toast.success('Configurações salvas com sucesso!', { id: updateToastId });
     } catch (error) {
       console.error("Erro ao salvar configurações:", error);
-      toast.error('Falha ao salvar as alterações.', { id: 'update-settings' });
+      toast.error('Falha ao salvar as alterações.', { id: updateToastId });
     } finally {
       setIsSubmitting(false);
     }
@@ -81,53 +110,28 @@ export function Configuracoes() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
-              <Input
-                label="Nome da Empresa/Órgão"
-                id="companyName"
-                name="companyName"
-                type="text"
-                value={settings.companyName || ''}
-                onChange={handleInputChange}
-              />
+              <Input label="Nome da Empresa/Órgão" id="companyName" name="companyName" type="text" value={settings.companyName || ''} onChange={handleInputChange} />
             </div>
-            
-            <Input
-              label="CNPJ"
-              id="cnpj"
-              name="cnpj"
-              type="text"
-              placeholder="00.000.000/0001-00"
-              value={settings.cnpj || ''}
-              onChange={handleInputChange}
-            />
-            
+            <Input label="CNPJ" id="cnpj" name="cnpj" type="text" placeholder="00.000.000/0001-00" value={settings.cnpj || ''} onChange={handleInputChange} />
             <div className="md:col-span-2">
-              <Input
-                label="Endereço"
-                id="address"
-                name="address"
-                type="text"
-                placeholder="Rua, Número, Bairro, Cidade - Estado, CEP"
-                value={settings.address || ''}
-                onChange={handleInputChange}
-              />
+              <Input label="Endereço" id="address" name="address" type="text" placeholder="Rua, Número, Bairro, Cidade - Estado, CEP" value={settings.address || ''} onChange={handleInputChange} />
             </div>
           </div>
 
-          {/* Área para o upload do logo (a ser implementada) */}
           <div className="mt-8 pt-6 border-t border-gray-700">
              <h2 className="text-xl font-bold mb-4">Logotipo</h2>
              <div className="flex items-center gap-6 p-4 bg-gray-800 rounded-lg">
                 <img 
-                    src={settings.logoUrl || 'https://placehold.jp/150x150.png?text=Logo'} 
+                    src={logoPreview || 'https://placehold.jp/150x150.png?text=Logo'} 
                     alt="Logo preview"
                     className="w-24 h-24 rounded-md object-cover bg-gray-700"
                 />
                 <div>
-                    <p className="text-gray-400 text-sm mb-2">A funcionalidade de upload será implementada em breve.</p>
-                    <button type="button" className="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg text-sm cursor-not-allowed opacity-50">
+                    <label htmlFor="logo-upload" className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg text-sm cursor-pointer">
                         Escolher arquivo
-                    </button>
+                    </label>
+                    <input id="logo-upload" type="file" accept="image/png, image/jpeg" className="hidden" onChange={handleLogoChange} />
+                    <p className="text-gray-400 text-xs mt-2">Envie um arquivo PNG ou JPG.</p>
                 </div>
              </div>
           </div>
@@ -140,6 +144,5 @@ export function Configuracoes() {
         </form>
       </main>
     </div>
-   );
+    );
 }
-// ...

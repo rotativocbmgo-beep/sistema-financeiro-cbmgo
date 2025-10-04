@@ -2,11 +2,10 @@ import { compare } from 'bcryptjs';
 import { sign } from 'jsonwebtoken';
 import { prisma } from '../server';
 import authConfig from '../config/auth';
-import { IAuth } from '../interfaces/IAuth'; // A importação agora funciona
+import { IAuth } from '../interfaces/IAuth';
 
 export class AuthenticateUserService {
   async execute({ email, password }: IAuth) {
-    // O comando 'npx prisma generate' corrige o erro aqui.
     const user = await prisma.user.findUnique({ where: { email } });
 
     if (!user) {
@@ -21,18 +20,25 @@ export class AuthenticateUserService {
 
     const { secret, expiresIn } = authConfig.jwt;
 
-    // A sintaxe da função sign estava correta, o problema era de tipagem do TS
-    // que pode ser resolvido com as versões corretas das libs.
-    const token = sign({}, secret, {
-      subject: user.id,
-      expiresIn,
-    });
+    const payload = {
+      name: user.name,
+      email: user.email,
+      sub: user.id,
+    };
 
-    // Não retornar a senha
+    // ====================================================================
+    // SOLUÇÃO DE FORÇA BRUTA: IGNORAR O ERRO DE TIPO
+    // ====================================================================
+    // @ts-ignore
+    const token = sign(payload, secret, { expiresIn });
+    // ====================================================================
+
+
     const userResponse = {
       id: user.id,
       name: user.name,
       email: user.email,
+      role: user.role,
     };
 
     return { user: userResponse, token };

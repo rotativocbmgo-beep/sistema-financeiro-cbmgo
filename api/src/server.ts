@@ -1,29 +1,39 @@
-﻿import express from 'express';
-import cors from 'cors';
-import { PrismaClient } from '@prisma/client';
-import mainRouter from './routes/index'; // Importar o roteador principal
+﻿// api/src/server.ts
 
-export const prisma = new PrismaClient({
-  log: ['query'],
-});
+import 'dotenv/config';
+import 'express-async-errors';
+import express, { Request, Response, NextFunction } from 'express';
+import cors from 'cors';
+import { PrismaClient } from '@prisma/client'; // 1. Importe o PrismaClient
+import router from './routes';
+import { AppError } from './errors/AppError';
 
 const app = express();
 
+export const prisma = new PrismaClient(); // 2. CRIE E EXPORTE a instância do prisma
+
 app.use(cors());
 app.use(express.json());
+app.use(router);
 
-// Rota de teste
-app.get('/', (req, res) => {
-  return res.json({
-    message: 'API do Sistema Financeiro CBMGO no ar!',
+// ... (o resto do seu arquivo continua igual) ...
+app.use((err: Error, request: Request, response: Response, _: NextFunction) => {
+  if (err instanceof AppError) {
+    return response.status(err.statusCode).json({
+      status: 'error',
+      message: err.message,
+    });
+  }
+
+  console.error(err);
+
+  return response.status(500).json({
+    status: 'error',
+    message: 'Internal server error',
   });
 });
 
-// Usar o roteador principal com o prefixo /api
-app.use('/api', mainRouter);
-
 const PORT = process.env.PORT || 3333;
-
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando em http://localhost:${PORT}` );
+  console.log(`🚀 Server started on port ${PORT}!`);
 });

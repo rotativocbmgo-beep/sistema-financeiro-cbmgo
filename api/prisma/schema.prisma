@@ -1,84 +1,96 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL" )
+  directUrl = env("DIRECT_URL")
 }
 
-model User {
-  id        String     @id @default(uuid())
-  name      String
-  email     String     @unique
-  password  String
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+// --- ENUMS: Para padronizar valores e evitar erros de digitação ---
 
-  processos   Processo[]
-  lancamentos Lancamento[]
-  
-  // --- RELACIONAMENTO ADICIONADO ---
-  settings    UserSettings? // Relacionamento um-para-um opcional
-}
-
-model Lancamento {
-  id        String   @id @default(uuid())
-  data      DateTime
-  historico String
-  valor     Decimal
-  tipo      TipoLancamento
-
-  processoId String?
-  processo   Processo? @relation(fields: [processoId], references: [id])
-
-  userId    String
-  user      User    @relation(fields: [userId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Processo {
-  id            String   @id @default(uuid())
-  numero        String   @unique
-  credor        String
-  empenhoNumero String
-  empenhoVerba  String
-  status        StatusProcesso @default(PENDENTE)
-
-  lancamentos Lancamento[]
-
-  userId        String
-  user          User     @relation(fields: [userId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-// --- MODELO NOVO ---
-model UserSettings {
-  id          String  @id @default(uuid())
-  companyName String?
-  cnpj        String?
-  address     String?
-  logoUrl     String?
-
-  // Chave estrangeira para o relacionamento um-para-um
-  userId      String  @unique
-  user        User    @relation(fields: [userId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-
-enum TipoLancamento {
-  DEBITO
-  CREDITO
+enum Role {
+  USER
+  ADMIN
 }
 
 enum StatusProcesso {
   PENDENTE
   LIQUIDADO
+}
+
+enum TipoLancamento {
+  CREDITO
+  DEBITO
+}
+
+
+// --- MODELS: A estrutura das suas tabelas ---
+
+model User {
+  id          String         @id @default(uuid())
+  name        String
+  email       String         @unique
+  password    String
+  role        Role           @default(USER)
+  settings    UserSettings?
+  processos   Processo[]
+  lancamentos Lancamento[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@map("users")
+}
+
+model UserSettings {
+  id                             String   @id @default(uuid())
+  user                           User     @relation(fields: [userId], references: [id])
+  userId                         String   @unique
+  companyName                    String?
+  cnpj                           String?
+  address                        String?
+  logoUrl                        String?
+  receber_notificacoes_processo  Boolean  @default(true)
+  receber_notificacoes_pagamento Boolean  @default(true)
+  receber_notificacoes_reposicao Boolean  @default(true)
+  createdAt                      DateTime @default(now())
+  updatedAt                      DateTime @updatedAt
+
+  @@map("user_settings")
+}
+
+model Processo {
+  id            String         @id @default(uuid())
+  numero        String         @unique
+  credor        String
+  empenhoNumero String?
+  empenhoVerba  String?
+  status        StatusProcesso @default(PENDENTE)
+  lancamentos   Lancamento[]
+  user          User           @relation(fields: [userId], references: [id])
+  userId        String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@map("processos")
+}
+
+model Lancamento {
+  id         String         @id @default(uuid())
+  data       DateTime
+  historico  String
+  valor      Float
+  tipo       TipoLancamento
+  processo   Processo?      @relation(fields: [processoId], references: [id])
+  processoId String?
+  user       User           @relation(fields: [userId], references: [id])
+  userId     String
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@map("lancamentos")
 }

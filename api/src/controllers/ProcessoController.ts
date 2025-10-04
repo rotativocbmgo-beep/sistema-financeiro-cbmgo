@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { TipoLancamento } from "@prisma/client";
 
-// --- Serviços para CRUD e Operações Principais ---
+// --- Serviços ---
 import { CreateProcessoService } from "../services/CreateProcessoService";
 import { ListProcessosService } from "../services/ListProcessosService";
 import { GetProcessoService } from "../services/GetProcessoService";
@@ -10,9 +10,6 @@ import { CreateReposicaoService } from "../services/CreateReposicaoService";
 import { ListLancamentosService } from "../services/ListLancamentosService";
 import { UpdateLancamentoService } from "../services/UpdateLancamentoService";
 import { DeleteLancamentoService } from "../services/DeleteLancamentoService";
-import { GetSaldoService } from "../services/GetSaldoService";
-
-// --- Serviços para Exportação de Dados ---
 import { ExportLancamentosService } from "../services/ExportLancamentosService";
 import { ExportLancamentosPDFService } from "../services/ExportLancamentosPDFService";
 
@@ -67,7 +64,7 @@ export class ProcessoController {
     }
   }
 
-  // --- Métodos para Lançamentos Avulsos (Reposições) e Gerais ---
+  // --- Métodos para Lançamentos (Reposições, etc.) ---
   async createReposicao(request: Request, response: Response) {
     try {
       const { id: userId } = request.user;
@@ -93,7 +90,7 @@ export class ProcessoController {
         pageSize: pageSize ? parseInt(String(pageSize)) : undefined,
         dataInicio: dataInicio ? String(dataInicio) : undefined,
         dataFim: dataFim ? String(dataFim) : undefined,
-        tipo: tipo ? (String(tipo) as TipoLancamento) : undefined,
+        tipo: tipo ? (String(tipo).toUpperCase() as TipoLancamento) : undefined,
       });
       return response.status(200).json(resultado);
     } catch (error) {
@@ -128,18 +125,7 @@ export class ProcessoController {
     }
   }
 
-  // --- Métodos para Dados Agregados e Relatórios ---
-  async getSaldo(request: Request, response: Response) {
-    try {
-      const { id: userId } = request.user;
-      const getSaldoService = new GetSaldoService();
-      const { saldo } = await getSaldoService.execute({ userId });
-      return response.status(200).json({ saldo });
-    } catch (error) {
-      return response.status(400).json({ error: (error as Error).message });
-    }
-  }
-
+  // --- Métodos para Exportação ---
   async exportCSV(request: Request, response: Response) {
     try {
       const { id: userId } = request.user;
@@ -150,16 +136,13 @@ export class ProcessoController {
         userId,
         dataInicio: dataInicio ? String(dataInicio) : undefined,
         dataFim: dataFim ? String(dataFim) : undefined,
-        tipo: tipo ? (String(tipo) as TipoLancamento) : undefined,
+        tipo: tipo ? (String(tipo).toUpperCase() as TipoLancamento) : undefined,
       });
 
       const fileName = `extrato-${new Date().toISOString().split('T')[0]}.csv`;
-
       response.setHeader('Content-Type', 'text/csv; charset=utf-8');
       response.setHeader("Content-Disposition", `attachment; filename=${fileName}`);
-      
-      response.status(200).send('\uFEFF' + csv); // BOM para UTF-8 no Excel
-
+      response.status(200).send('\uFEFF' + csv);
     } catch (error) {
       return response.status(400).json({ error: (error as Error).message });
     }
@@ -175,16 +158,13 @@ export class ProcessoController {
         userId,
         dataInicio: dataInicio ? String(dataInicio) : undefined,
         dataFim: dataFim ? String(dataFim) : undefined,
-        tipo: tipo ? (String(tipo) as TipoLancamento) : undefined,
+        tipo: tipo ? (String(tipo).toUpperCase() as TipoLancamento) : undefined,
       });
 
       const fileName = `relatorio-financeiro-${new Date().toISOString().split('T')[0]}.pdf`;
-
       response.setHeader('Content-Type', 'application/pdf');
       response.setHeader("Content-Disposition", `attachment; filename=${fileName}`);
-      
       response.status(200).send(pdfBuffer);
-
     } catch (error) {
       return response.status(400).json({ error: (error as Error).message });
     }

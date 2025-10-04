@@ -1,9 +1,14 @@
 import { Router } from 'express';
+// Correção: Importações nomeadas com {}
 import { UsersController } from '../controllers/UsersController';
+import { ensureAuthenticated } from '../middlewares/ensureAuthenticated';
 
-const usersRouter = Router();
+const usersRoutes = Router();
 const usersController = new UsersController();
 
-usersRouter.post('/', usersController.create);
+usersRoutes.post('/', usersController.create);
 
-export default usersRouter;
+// Exemplo de rota protegida
+// usersRoutes.get('/profile', ensureAuthenticated, usersController.show);
+
+export default usersRoutes;

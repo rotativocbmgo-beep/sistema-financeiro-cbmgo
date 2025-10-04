@@ -3,14 +3,17 @@
     "target": "ES2020",
     "module": "CommonJS",
     "lib": ["ES2020"],
-    "outDir": "./build", // Usar um caminho relativo como './build' é mais robusto
-    // "rootDir": "src", // REMOVA OU COMENTE ESTA LINHA
+    "outDir": "./build",
     "strict": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "resolveJsonModule": true
   },
-  "include": ["src/**/*.ts", "prisma/**/*.ts"],
-  "exclude": ["node_modules"] // É uma boa prática excluir explicitamente node_modules
+  "include": [
+    "src/**/*.ts",
+    "prisma/**/*.ts",
+    "check-db-connection.ts" // <-- ADICIONE ESTA LINHA
+  ],
+  "exclude": ["node_modules"]
 }

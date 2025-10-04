@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { GetUserSettingsService } from "../services/GetUserSettingsService";
 import { UpdateUserSettingsService } from "../services/UpdateUserSettingsService";
+import { UpdateUserLogoService } from "../services/UpdateUserLogoService"; // Importar o novo serviço
 
 export class UserSettingsController {
   /**
@@ -24,7 +25,6 @@ export class UserSettingsController {
     try {
       const { id: userId } = request.user;
       const { companyName, cnpj, address } = request.body;
-      // A logoUrl será tratada em um endpoint de upload separado no futuro.
       
       const updateUserSettings = new UpdateUserSettingsService();
       const settings = await updateUserSettings.execute({
@@ -32,6 +32,29 @@ export class UserSettingsController {
         companyName,
         cnpj,
         address,
+      });
+
+      return response.json(settings);
+    } catch (error: any) {
+      return response.status(400).json({ error: error.message });
+    }
+  }
+
+  /**
+   * Lida com a requisição para atualizar o logotipo do usuário.
+   */
+  async updateLogo(request: Request, response: Response) {
+    try {
+      const { id: userId } = request.user;
+      if (!request.file) {
+        return response.status(400).json({ error: 'Nenhum arquivo foi enviado.' });
+      }
+      const { filename } = request.file;
+
+      const updateUserLogo = new UpdateUserLogoService();
+      const settings = await updateUserLogo.execute({
+        userId,
+        logoFilename: filename,
       });
 
       return response.json(settings);

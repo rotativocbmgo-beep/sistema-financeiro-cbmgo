@@ -1,13 +1,14 @@
 import { Router } from 'express';
+// Correção: Importações nomeadas com {}
 import { UserSettingsController } from '../controllers/UserSettingsController';
+import { ensureAuthenticated } from '../middlewares/ensureAuthenticated';
 
-const settingsRouter = Router();
+const settingsRoutes = Router();
 const userSettingsController = new UserSettingsController();
 
-// Rota para buscar as configurações do usuário logado
-settingsRouter.get('/', userSettingsController.get);
+settingsRoutes.use(ensureAuthenticated);
 
-// Rota para atualizar as configurações do usuário logado
-settingsRouter.put('/', userSettingsController.update);
+settingsRoutes.get('/', userSettingsController.get);
+settingsRoutes.put('/', userSettingsController.update);
 
-export default settingsRouter;
+export default settingsRoutes;

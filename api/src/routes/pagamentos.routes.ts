@@ -1,13 +1,14 @@
-﻿import { Router } from "express";
-import { PagamentoController } from "../controllers/PagamentoController";
-const router = Router();
-const ctrl = new PagamentoController();
+﻿// api/src/routes/pagamentos.routes.ts
 
-// CRUD básico de exemplo
-router.get("/", ctrl.list);
-router.get("/:id", ctrl.getById);
-router.post("/", ctrl.create);
-router.put("/:id", ctrl.update);
-router.delete("/:id", ctrl.remove);
+import { Router } from 'express';
+// CORREÇÃO: Importações nomeadas com chaves {}
+import { PagamentoController } from '../controllers/PagamentoController';
+import { ensureAuthenticated } from '../middlewares/ensureAuthenticated';
 
-export default router;
+const pagamentosRoutes = Router();
+const pagamentoController = new PagamentoController();
+
+pagamentosRoutes.use(ensureAuthenticated);
+pagamentosRoutes.post('/', pagamentoController.create);
+
+export default pagamentosRoutes;

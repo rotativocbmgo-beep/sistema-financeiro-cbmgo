@@ -1,13 +1,27 @@
-﻿import { FormEvent, useState } from 'react';
+﻿import { FormEvent, useState, useEffect } from 'react'; // 1. Adicionar useEffect
 import { useAuth } from '../contexts/AuthContext';
 import Input from '../components/Input';
-import { Link } from 'react-router-dom'; // 1. Importar o Link
 
 export function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login } = useAuth();
+
+  // --- CÓDIGO DE DIAGNÓSTICO ---
+  // Este bloco irá logar a URL da API que o frontend está tentando usar.
+  useEffect(() => {
+    const apiUrl = import.meta.env.VITE_API_URL;
+    console.log("--- DIAGNÓSTICO DE API ---");
+    if (apiUrl) {
+      console.log(`[INFO] A variável VITE_API_URL está definida como: ${apiUrl}`);
+    } else {
+      console.error("[ERRO] A variável de ambiente VITE_API_URL não está definida!");
+      console.log("[INFO] O frontend tentará usar a URL base do próprio site para as requisições, o que causará falhas em produção.");
+    }
+    console.log("--------------------------");
+  }, []);
+  // --- FIM DO CÓDIGO DE DIAGNÓSTICO ---
 
   async function handleLogin(event: FormEvent) {
     event.preventDefault();
@@ -19,6 +33,7 @@ export function Login() {
     setIsSubmitting(true);
     try {
       await login({ email, password });
+      // O redirecionamento será tratado pelo Router
     } catch (error) {
       console.error('Erro de login:', error);
       alert('Falha no login. Verifique suas credenciais.');
@@ -66,12 +81,6 @@ export function Login() {
               </button>
             </div>
           </form>
-          {/* 2. Adicionar o link para a página de registro */}
-          <div className="text-center mt-6">
-            <Link to="/register" className="text-cyan-400 hover:text-cyan-300 font-medium transition-colors">
-              Não tem uma conta? Cadastre-se
-            </Link>
-          </div>
         </main>
       </div>
     </div>
