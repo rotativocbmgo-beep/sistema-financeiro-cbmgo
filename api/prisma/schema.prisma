@@ -11,86 +11,86 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// --- ENUMS: Para padronizar valores e evitar erros de digitação ---
-
+// Enum para definir os papéis de usuário permitidos
 enum Role {
   USER
   ADMIN
 }
 
+// Enum para o status do processo
 enum StatusProcesso {
   PENDENTE
   LIQUIDADO
 }
 
+// Enum para o tipo de lançamento
 enum TipoLancamento {
   CREDITO
   DEBITO
 }
 
-
-// --- MODELS: A estrutura das suas tabelas ---
-
 model User {
-  id          String         @id @default(uuid())
-  name        String
-  email       String         @unique
-  password    String
-  role        Role           @default(USER)
-  settings    UserSettings?
-  processos   Processo[]
-  lancamentos Lancamento[]
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(USER)
+  settings  UserSettings?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@map("users")
+  // Relações
+  processos  Processo[]
+  lancamentos Lancamento[]
+
+  @@map("users") // <-- ADICIONADO
 }
 
 model UserSettings {
-  id                             String   @id @default(uuid())
-  user                           User     @relation(fields: [userId], references: [id])
-  userId                         String   @unique
-  companyName                    String?
-  cnpj                           String?
-  address                        String?
-  logoUrl                        String?
-  receber_notificacoes_processo  Boolean  @default(true)
+  id                            String   @id @default(uuid())
+  user                          User     @relation(fields: [userId], references: [id])
+  userId                        String   @unique
+  receber_notificacoes_processo Boolean  @default(true)
   receber_notificacoes_pagamento Boolean  @default(true)
   receber_notificacoes_reposicao Boolean  @default(true)
-  createdAt                      DateTime @default(now())
-  updatedAt                      DateTime @updatedAt
+  createdAt                     DateTime @default(now())
+  updatedAt                     DateTime @updatedAt
 
-  @@map("user_settings")
+  @@map("user_settings") // <-- ADICIONADO
 }
 
 model Processo {
-  id            String         @id @default(uuid())
-  numero        String         @unique
+  id            String   @id @default(uuid())
+  numero        String   @unique
   credor        String
-  empenhoNumero String?
-  empenhoVerba  String?
+  empenhoNumero String
+  empenhoVerba  String
   status        StatusProcesso @default(PENDENTE)
-  lancamentos   Lancamento[]
-  user          User           @relation(fields: [userId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relações
+  user          User       @relation(fields: [userId], references: [id])
   userId        String
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  lancamentos   Lancamento[]
 
-  @@map("processos")
+  @@map("processos") // <-- ADICIONADO
 }
 
 model Lancamento {
-  id         String         @id @default(uuid())
-  data       DateTime
-  historico  String
-  valor      Float
-  tipo       TipoLancamento
-  processo   Processo?      @relation(fields: [processoId], references: [id])
-  processoId String?
-  user       User           @relation(fields: [userId], references: [id])
-  userId     String
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
+  id          String   @id @default(uuid())
+  data        DateTime
+  historico   String
+  valor       Decimal
+  tipo        TipoLancamento
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  @@map("lancamentos")
+  // Relações
+  user        User       @relation(fields: [userId], references: [id])
+  userId      String
+  processo    Processo?  @relation(fields: [processoId], references: [id])
+  processoId  String?
+
+  @@map("lancamentos") // <-- ADICIONADO
 }
