@@ -5,9 +5,12 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { api } from "../services/api";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import toast from 'react-hot-toast'; // 1. Importar
+import toast from 'react-hot-toast';
+import { usePermissions } from "../hooks/usePermissions";
+import { Skeleton } from "../components/Skeleton";
 
-// ... (Interfaces permanecem as mesmas) ...
+// --- Interfaces ---
+
 interface Lancamento {
   id: string;
   historico: string;
@@ -16,23 +19,59 @@ interface Lancamento {
   data: string;
 }
 
+// 1. CORREÇÃO: Atualizar a interface Processo para incluir os campos que faltavam
 interface Processo {
   id: string;
   numero: string;
   credor: string;
-  empenhoNumero: string;
-  empenhoVerba: string;
+  empenhoNumero: string; // Campo adicionado
+  empenhoVerba: string;  // Campo adicionado
   status: 'PENDENTE' | 'LIQUIDADO';
   lancamentos: Lancamento[];
+}
+
+// --- Componente de Skeleton (sem alteração) ---
+function DetalhesProcessoSkeleton() {
+  return (
+    <div className="max-w-4xl mx-auto">
+      <header className="mb-8 flex justify-between items-center">
+        <div>
+          <Skeleton className="h-8 w-64 mb-2" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+        <Skeleton className="h-10 w-24" />
+      </header>
+      <main className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="md:col-span-2 bg-gray-900 p-6 rounded-lg shadow-lg space-y-6">
+          <Skeleton className="h-6 w-1/2" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-3/4" />
+          <Skeleton className="h-8 w-24" />
+        </div>
+        <div className="bg-gray-900 p-6 rounded-lg shadow-lg space-y-4">
+          <Skeleton className="h-6 w-3/4" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </div>
+      </main>
+    </div>
+  );
 }
 
 
 export function DetalhesProcesso() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { hasPermission } = usePermissions();
+
   const [processo, setProcesso] = useState<Processo | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const canLiquidar = hasPermission('processo:liquidar');
+  const canDelete = hasPermission('lancamento:excluir');
 
   const fetchProcesso = useCallback(async () => {
     if (!id) return;
@@ -52,27 +91,45 @@ export function DetalhesProcesso() {
   }, [fetchProcesso]);
 
   const handleLiquidar = async () => {
-    if (!id || processo?.status === 'LIQUIDADO') return;
+    if (!id || processo?.status === 'LIQUIDADO' || !canLiquidar) return;
     if (!window.confirm("Tem certeza que deseja liquidar este processo? Esta ação mudará seu status para LIQUIDADO.")) return;
 
     setIsSubmitting(true);
-    const toastId = toast.loading('Liquidando processo...'); // Feedback
+    const toastId = toast.loading('Liquidando processo...');
 
     try {
       await api.patch(`/processos/${id}/liquidar`);
-      toast.success("Processo liquidado com sucesso!", { id: toastId }); // 2. Substituir alert
+      toast.success("Processo liquidado com sucesso!", { id: toastId });
       fetchProcesso();
     } catch (error: any) {
       const message = error.response?.data?.message || "Falha ao liquidar o processo.";
-      toast.error(message, { id: toastId }); // 3. Substituir alert
+      toast.error(message, { id: toastId });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // ... (O resto do JSX permanece o mesmo) ...
+  const handleDelete = async () => {
+    if (!id || !canDelete) return;
+    if (!window.confirm("ATENÇÃO: Tem certeza que deseja excluir este processo? Todos os seus lançamentos financeiros associados também serão removidos permanentemente. Esta ação não pode ser desfeita.")) return;
+
+    setIsDeleting(true);
+    const toastId = toast.loading('Excluindo processo...');
+
+    try {
+      await api.delete(`/processos/${id}`);
+      toast.success("Processo excluído com sucesso!", { id: toastId });
+      navigate('/processos');
+    } catch (error: any) {
+      const message = error.response?.data?.message || "Falha ao excluir o processo.";
+      toast.error(message, { id: toastId });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (loading) {
-    return <div className="p-8 text-center">Carregando detalhes do processo...</div>;
+    return <DetalhesProcessoSkeleton />;
   }
 
   if (!processo) {
@@ -93,17 +150,28 @@ export function DetalhesProcesso() {
 
       <main className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-2 bg-gray-900 p-6 rounded-lg shadow-lg">
-          <div className="flex justify-between items-start mb-4 border-b border-gray-700 pb-2">
+          <div className="flex flex-wrap justify-between items-start gap-4 mb-4 border-b border-gray-700 pb-4">
             <h2 className="text-xl font-bold">Informações Gerais</h2>
-            {processo.status === 'PENDENTE' && (
-              <button
-                onClick={handleLiquidar}
-                disabled={isSubmitting}
-                className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors disabled:opacity-50"
-              >
-                {isSubmitting ? 'Liquidando...' : 'Liquidar Processo'}
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              {processo.status === 'PENDENTE' && canLiquidar && (
+                <button
+                  onClick={handleLiquidar}
+                  disabled={isSubmitting || isDeleting}
+                  className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Liquidando...' : 'Liquidar Processo'}
+                </button>
+              )}
+              {canDelete && (
+                 <button
+                    onClick={handleDelete}
+                    disabled={isSubmitting || isDeleting}
+                    className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors disabled:opacity-50"
+                  >
+                    {isDeleting ? 'Excluindo...' : 'Excluir Processo'}
+                  </button>
+              )}
+            </div>
           </div>
           <div className="space-y-4">
             <div>
@@ -112,10 +180,12 @@ export function DetalhesProcesso() {
             </div>
             <div>
               <p className="text-sm text-gray-400">Nº do Empenho</p>
+              {/* Agora o acesso a 'empenhoNumero' é válido */}
               <p className="text-lg">{processo.empenhoNumero || 'N/A'}</p>
             </div>
             <div>
               <p className="text-sm text-gray-400">Verba Orçamentária</p>
+              {/* Agora o acesso a 'empenhoVerba' é válido */}
               <p className="text-lg">{processo.empenhoVerba || 'N/A'}</p>
             </div>
             <div>
