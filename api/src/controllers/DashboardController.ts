@@ -2,7 +2,7 @@
 
 import { Request, Response } from "express";
 import { TipoLancamento } from "@prisma/client";
-import { prisma } from "../server"; // Importar o prisma
+import { prisma } from "../server";
 
 // Serviços
 import { GetSaldoService } from "../services/GetSaldoService";
@@ -17,6 +17,8 @@ import { ExportLancamentosPDFService } from "../services/ExportLancamentosPDFSer
 import { CreateReposicaoService } from "../services/CreateReposicaoService";
 
 export class DashboardController {
+  // ... (outros métodos como getSaldo, getTotalDespesas, etc., permanecem inalterados)
+
   async getSaldo(request: Request, response: Response) {
     try {
       const { id: userId } = request.user;
@@ -71,32 +73,41 @@ export class DashboardController {
     }
   }
 
+  // --- MÉTODO createReposicao ATUALIZADO ---
   async createReposicao(request: Request, response: Response) {
     try {
       const { id: userId } = request.user;
       const { data, historico, valor } = request.body;
+
+      // 1. Constrói a URL do comprovante se um arquivo foi enviado.
+      const comprovanteUrl = request.file ? `/files/${request.file.filename}` : null;
+
       const createReposicaoService = new CreateReposicaoService();
       const reposicao = await createReposicaoService.execute({
-        data: new Date(data), historico, valor, userId,
+        data: new Date(data),
+        historico,
+        valor,
+        userId,
+        comprovanteUrl, // 2. Passa a URL para o serviço.
       });
       return response.status(201).json(reposicao);
     } catch (error) {
+      // O casting (error as Error) é uma boa prática para acessar a propriedade 'message' com segurança.
       return response.status(400).json({ error: (error as Error).message });
     }
   }
 
-  // --- NOVO MÉTODO PARA ATIVIDADES RECENTES ---
   async getRecentActivities(request: Request, response: Response) {
     try {
       const recentActivities = await prisma.activityLog.findMany({
         orderBy: {
           timestamp: 'desc',
         },
-        take: 5, // Pega apenas as 5 atividades mais recentes
+        take: 5,
         include: {
           user: {
             select: {
-              name: true, // Inclui o nome do usuário que realizou a ação
+              name: true,
             },
           },
         },

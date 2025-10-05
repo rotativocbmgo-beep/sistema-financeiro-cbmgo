@@ -1,7 +1,10 @@
-﻿import { prisma } from "../server";
+﻿// api/src/services/CreateProcessoService.ts
+
+import { prisma } from "../server";
 import { AppError } from "../errors/AppError";
 import { StatusProcesso, TipoLancamento } from "@prisma/client";
 
+// 1. A interface agora inclui um campo opcional para a URL do comprovante.
 interface ICreateProcessoRequest {
   numero: string;
   credor: string;
@@ -10,6 +13,7 @@ interface ICreateProcessoRequest {
   dataPagamento: Date;
   valor: number;
   userId: string;
+  comprovanteUrl?: string | null; // <-- CAMPO ADICIONADO
 }
 
 export class CreateProcessoService {
@@ -21,6 +25,7 @@ export class CreateProcessoService {
     dataPagamento,
     valor,
     userId,
+    comprovanteUrl, // <-- Recebe o novo campo
   }: ICreateProcessoRequest) {
     // Validações iniciais
     if (!numero || !credor || !valor || !userId) {
@@ -39,7 +44,7 @@ export class CreateProcessoService {
       });
 
       if (processoExistente) {
-        throw new AppError("Já existe um processo cadastrado com este número.", 409); // 409 Conflict é mais apropriado
+        throw new AppError("Já existe um processo cadastrado com este número.", 409);
       }
 
       // 2. Cria o novo Processo
@@ -55,7 +60,6 @@ export class CreateProcessoService {
       });
 
       // 3. Cria o Lançamento inicial associado ao Processo
-      // Se esta operação falhar, a criação do processo (passo 2) será desfeita.
       await tx.lancamento.create({
         data: {
           data: dataPagamento,
@@ -63,11 +67,12 @@ export class CreateProcessoService {
           valor: valor,
           tipo: TipoLancamento.DEBITO,
           userId,
-          processoId: processo.id, // Associa o lançamento ao processo recém-criado
+          processoId: processo.id,
+          comprovanteUrl: comprovanteUrl, // <-- 2. A URL do comprovante é salva aqui
         },
       });
 
-      // 4. Retorna o processo criado (sem os lançamentos, para um payload mais limpo)
+      // 4. Retorna o processo criado
       return processo;
     });
   }

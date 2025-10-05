@@ -92,7 +92,7 @@ model Processo {
   status        StatusProcesso @default(PENDENTE)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  deletedAt     DateTime? // <-- CAMPO ADICIONADO
+  deletedAt     DateTime?
 
   user        User       @relation(fields: [userId], references: [id])
   userId      String
@@ -102,14 +102,15 @@ model Processo {
 }
 
 model Lancamento {
-  id          String   @id @default(uuid())
-  data        DateTime
-  historico   String
-  valor       Decimal
-  tipo        TipoLancamento
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  deletedAt   DateTime? // <-- CAMPO ADICIONADO
+  id             String   @id @default(uuid())
+  data           DateTime
+  historico      String
+  valor          Decimal
+  tipo           TipoLancamento
+  comprovanteUrl String? // <-- CAMPO ADICIONADO PARA O COMPROVANTE
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
 
   user        User       @relation(fields: [userId], references: [id])
   userId      String
