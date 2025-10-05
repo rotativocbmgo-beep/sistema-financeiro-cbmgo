@@ -1,5 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// api/prisma/schema.prisma
 
 generator client {
   provider = "prisma-client-js"
@@ -7,7 +6,7 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL" )
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
@@ -35,55 +34,51 @@ enum ReportStatus {
   ASSINADO
 }
 
-
 // --- MODELS ---
 
 model User {
   id        String   @id @default(uuid())
   name      String
   email     String   @unique
-  password  String? // Senha se torna opcional para permitir login com Google
-  googleId  String?  @unique // ID do usuário vindo do Google
-  status    UserStatus @default(PENDENTE) // Status para controle de aprovação
+  password  String?
+  googleId  String?  @unique
+  status    UserStatus @default(PENDENTE)
 
   settings  UserSettings?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relações
-  processos   Processo[]
-  lancamentos Lancamento[]
-  reports     Report[]
-  signatures  Signature[]
-  permissions Permission[] @relation("UserPermissions")
+  processos    Processo[]
+  lancamentos  Lancamento[]
+  reports      Report[]
+  signatures   Signature[]
+  permissions  Permission[]  @relation("UserPermissions")
+  activityLogs ActivityLog[] // Relação para o histórico de atividades
 
   @@map("users")
 }
 
 model Permission {
   id          String @id @default(uuid())
-  action      String @unique // Ex: "lancamento:criar:debito"
+  action      String @unique
   description String
 
-  // Relação
   users User[] @relation("UserPermissions")
 
   @@map("permissions")
 }
 
 model UserSettings {
-  id                            String   @id @default(uuid())
-  user                          User     @relation(fields: [userId], references: [id])
-  userId                        String   @unique
-  companyName                   String?
-  cnpj                          String?
-  address                       String?
-  logoUrl                       String?
-  receber_notificacoes_processo Boolean  @default(true)
-  receber_notificacoes_pagamento Boolean  @default(true)
-  receber_notificacoes_reposicao Boolean  @default(true)
-  createdAt                     DateTime @default(now())
-  updatedAt                     DateTime @updatedAt
+  id          String   @id @default(uuid())
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String   @unique
+  companyName String?
+  cnpj        String?
+  address     String?
+  logoUrl     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@map("user_settings")
 }
@@ -98,10 +93,9 @@ model Processo {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   
-  // Relações
-  user          User       @relation(fields: [userId], references: [id])
-  userId        String
-  lancamentos   Lancamento[]
+  user        User       @relation(fields: [userId], references: [id])
+  userId      String
+  lancamentos Lancamento[]
 
   @@map("processos")
 }
@@ -115,7 +109,6 @@ model Lancamento {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // Relações
   user        User       @relation(fields: [userId], references: [id])
   userId      String
   processo    Processo?  @relation(fields: [processoId], references: [id])
@@ -132,7 +125,6 @@ model Report {
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
-  // Relações
   creator   User         @relation(fields: [creatorId], references: [id])
   creatorId String
   signatures Signature[]
@@ -144,11 +136,24 @@ model Signature {
   id        String   @id @default(uuid())
   signedAt  DateTime @default(now())
 
-  // Relações
   report    Report   @relation(fields: [reportId], references: [id])
   reportId  String
   user      User     @relation(fields: [userId], references: [id])
   userId    String
 
   @@map("signatures")
+}
+
+// --- NOVO MODELO PARA LOG DE ATIVIDADES ---
+model ActivityLog {
+  id          String   @id @default(uuid())
+  timestamp   DateTime @default(now())
+  action      String
+  details     Json?
+  ipAddress   String?
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+
+  @@map("activity_logs")
 }

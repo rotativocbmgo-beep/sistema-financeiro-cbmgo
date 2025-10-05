@@ -1,10 +1,23 @@
-﻿import { useState, useEffect } from "react";
+﻿// web/src/pages/Dashboard.tsx
+
+import { useState, useEffect } from "react";
 import { api } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import { useLayout } from "../contexts/LayoutContext";
 import toast from "react-hot-toast";
 import { Graficos } from '../components/Dashboard/Graficos';
 import { Skeleton } from "../components/Skeleton";
+import { ActivityFeed } from "../components/Dashboard/ActivityFeed";
+
+// Interface para o log de atividade
+interface ActivityLog {
+  id: string;
+  timestamp: string;
+  action: string;
+  user: {
+    name: string;
+  };
+}
 
 export function Dashboard() {
   const { logout } = useAuth();
@@ -12,6 +25,7 @@ export function Dashboard() {
   
   const [saldo, setSaldo] = useState<number>(0);
   const [totalDespesas, setTotalDespesas] = useState<number>(0);
+  const [recentActivities, setRecentActivities] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -20,41 +34,28 @@ export function Dashboard() {
 
   useEffect(() => {
     async function fetchData() {
-      console.log('[Dashboard] Iniciando busca de dados...');
-      
+      setLoading(true);
       try {
-        const [saldoResponse, despesasResponse] = await Promise.all([
+        // Buscar todos os dados em paralelo
+        const [saldoResponse, despesasResponse, activityResponse] = await Promise.all([
           api.get('/saldo'),
-          api.get('/total-despesas')
+          api.get('/total-despesas'),
+          api.get('/recent-activities') // Busca as atividades recentes
         ]);
         
-        console.log('[Dashboard] Resposta saldo:', saldoResponse.data);
-        console.log('[Dashboard] Resposta despesas:', despesasResponse.data);
-        
-        // Garantir que sempre temos um número, mesmo que seja 0
-        const saldoValue = Number(saldoResponse.data?.saldo ?? 0);
-        const despesasValue = Number(despesasResponse.data?.totalDespesas ?? 0);
-        
-        console.log('[Dashboard] Valores processados - Saldo:', saldoValue, 'Despesas:', despesasValue);
-        
-        // CORREÇÃO CRÍTICA: Atualizar TODOS os estados em sequência
-        setSaldo(saldoValue);
-        setTotalDespesas(despesasValue);
-        setLoading(false);
-        
-        console.log('[Dashboard] Estados atualizados, loading definido como false');
+        setSaldo(Number(saldoResponse.data?.saldo ?? 0));
+        setTotalDespesas(Number(despesasResponse.data?.totalDespesas ?? 0));
+        setRecentActivities(activityResponse.data); // Armazena as atividades no estado
 
       } catch (err: any) {
         console.error('[Dashboard] Erro ao buscar dados:', err);
-        
         if (err.response?.status === 401) {
           toast.error("Sessão expirada. Por favor, faça login novamente.");
           logout();
         } else {
           toast.error("Não foi possível carregar os dados do dashboard.");
         }
-        
-        // Mesmo com erro, desativar o loading
+      } finally {
         setLoading(false);
       }
     }
@@ -62,10 +63,9 @@ export function Dashboard() {
     fetchData();
   }, [logout, setPageTitle]);
 
-  console.log('[Dashboard] Renderizando - loading:', loading, 'saldo:', saldo, 'totalDespesas:', totalDespesas);
-
   return (
     <div className="space-y-8">
+      {/* Cards de Saldo e Despesas */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div className="bg-gray-900 p-6 rounded-lg shadow-lg">
           <h2 className="text-lg font-semibold text-gray-400 mb-2">Saldo Total</h2>
@@ -88,7 +88,16 @@ export function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Gráficos */}
       <Graficos />
+
+      {/* Componente de feed de atividades */}
+      <ActivityFeed 
+        title="Atividades Recentes no Sistema"
+        logs={recentActivities}
+        loading={loading}
+      />
     </div>
   );
 }

@@ -1,3 +1,5 @@
+// api/src/routes/dashboard.routes.ts
+
 import { Router } from 'express';
 import { ensureAuthenticated } from '../middlewares/ensureAuthenticated';
 import { DashboardController } from '../controllers/DashboardController';
@@ -14,8 +16,11 @@ dashboardRoutes.get('/total-despesas', dashboardController.getTotalDespesas);
 dashboardRoutes.get('/chart-data', dashboardController.getChartData);
 dashboardRoutes.get('/monthly-chart-data', dashboardController.getMonthlyChartData);
 
+// --- NOVA ROTA PARA ATIVIDADES RECENTES ---
+dashboardRoutes.get('/recent-activities', dashboardController.getRecentActivities);
+
 // --- ROTA DE CRIAÇÃO DE REPOSIÇÃO (CRÉDITO) ---
-dashboardRoutes.post('/reposicoes', dashboardController.createReposicao); // <-- ROTA ADICIONADA
+dashboardRoutes.post('/reposicoes', dashboardController.createReposicao);
 
 // --- ROTAS DE EXPORTAÇÃO ---
 dashboardRoutes.get('/export/csv', dashboardController.exportCSV);

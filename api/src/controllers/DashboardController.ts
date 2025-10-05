@@ -1,5 +1,8 @@
+// api/src/controllers/DashboardController.ts
+
 import { Request, Response } from "express";
 import { TipoLancamento } from "@prisma/client";
+import { prisma } from "../server"; // Importar o prisma
 
 // Serviços
 import { GetSaldoService } from "../services/GetSaldoService";
@@ -11,7 +14,7 @@ import { UpdateLancamentoService } from "../services/UpdateLancamentoService";
 import { DeleteLancamentoService } from "../services/DeleteLancamentoService";
 import { ExportLancamentosService } from "../services/ExportLancamentosService";
 import { ExportLancamentosPDFService } from "../services/ExportLancamentosPDFService";
-import { CreateReposicaoService } from "../services/CreateReposicaoService"; // Importado
+import { CreateReposicaoService } from "../services/CreateReposicaoService";
 
 export class DashboardController {
   async getSaldo(request: Request, response: Response) {
@@ -68,7 +71,6 @@ export class DashboardController {
     }
   }
 
-  // --- MÉTODO DE REPOSIÇÃO ADICIONADO AQUI ---
   async createReposicao(request: Request, response: Response) {
     try {
       const { id: userId } = request.user;
@@ -83,7 +85,29 @@ export class DashboardController {
     }
   }
 
-  // --- MÉTODOS DE LANÇAMENTOS ---
+  // --- NOVO MÉTODO PARA ATIVIDADES RECENTES ---
+  async getRecentActivities(request: Request, response: Response) {
+    try {
+      const recentActivities = await prisma.activityLog.findMany({
+        orderBy: {
+          timestamp: 'desc',
+        },
+        take: 5, // Pega apenas as 5 atividades mais recentes
+        include: {
+          user: {
+            select: {
+              name: true, // Inclui o nome do usuário que realizou a ação
+            },
+          },
+        },
+      });
+      return response.status(200).json(recentActivities);
+    } catch (error: any) {
+      return response.status(400).json({ error: error.message });
+    }
+  }
+
+  // --- MÉTODOS DE LANÇAMENTOS E EXPORTAÇÃO (sem alterações) ---
   async listLancamentos(request: Request, response: Response) {
     try {
       const { id: userId } = request.user;
@@ -130,7 +154,6 @@ export class DashboardController {
     }
   }
 
-  // --- MÉTODOS DE EXPORTAÇÃO ---
   async exportCSV(request: Request, response: Response) {
     try {
       const { id: userId } = request.user;
@@ -171,4 +194,3 @@ export class DashboardController {
     }
   }
 }
-// commit para backup

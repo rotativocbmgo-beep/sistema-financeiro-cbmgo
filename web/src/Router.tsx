@@ -28,7 +28,10 @@ const EditarLancamento = lazy(() => import('./pages/EditarLancamento').then(modu
 const DetalhesProcesso = lazy(() => import('./pages/DetalhesProcesso').then(module => ({ default: module.DetalhesProcesso })));
 const Configuracoes = lazy(() => import('./pages/Configuracoes').then(module => ({ default: module.Configuracoes })));
 const Admin = lazy(() => import('./pages/Admin').then(module => ({ default: module.Admin })));
-const Reports = lazy(() => import('./pages/Reports').then(module => ({ default: module.Reports }))); // <-- ROTA DE RELATÓRIOS
+const Reports = lazy(() => import('./pages/Reports').then(module => ({ default: module.Reports })));
+const Conta = lazy(() => import('./pages/Conta').then(module => ({ default: module.Conta })));
+const DetalhesUsuario = lazy(() => import('./pages/DetalhesUsuario').then(module => ({ default: module.DetalhesUsuario })));
+const HistoricoAtividades = lazy(() => import('./pages/HistoricoAtividades').then(module => ({ default: module.HistoricoAtividades })));
 
 // --- Rota Privada ---
 const PrivateRoute = () => {
@@ -54,8 +57,11 @@ export function Router() {
           <Route index element={<Dashboard />} />
           <Route path="extrato" element={<ExtratoGeral />} />
           <Route path="processos" element={<ListaProcessos />} />
-          <Route path="reports" element={<Reports />} /> {/* <-- ROTA DE RELATÓRIOS ADICIONADA */}
+          <Route path="reports" element={<Reports />} />
           <Route path="admin" element={<Admin />} />
+          <Route path="admin/users/:id" element={<DetalhesUsuario />} />
+          <Route path="admin/history" element={<HistoricoAtividades />} />
+          <Route path="conta" element={<Conta />} />
           
           <Route path="pagamentos/novo" element={<NovoPagamento />} />
           <Route path="reposicoes/nova" element={<NovaReposicao />} />

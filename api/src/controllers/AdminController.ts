@@ -3,9 +3,9 @@
 import { Request, Response } from 'express';
 import { prisma } from '../server';
 import { AppError } from '../errors/AppError';
+import { startOfDay, endOfDay } from 'date-fns';
 
 export class AdminController {
-  // Listar usuários por status (sem alterações)
   async listUsers(request: Request, response: Response) {
     const { status } = request.query;
 
@@ -15,7 +15,6 @@ export class AdminController {
 
     const users = await prisma.user.findMany({
       where: { status: status as any },
-      // Para a lista, continuamos enviando dados mínimos para performance
       select: { id: true, name: true, email: true, status: true, createdAt: true },
       orderBy: { createdAt: 'asc' },
     });
@@ -23,14 +22,11 @@ export class AdminController {
     return response.json(users);
   }
 
-  // --- NOVO MÉTODO ---
-  // Buscar um usuário específico pelo ID com suas permissões
   async getUserById(request: Request, response: Response) {
     const { userId } = request.params;
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      // Inclui as permissões associadas para o modal de edição
       include: {
         permissions: true,
       },
@@ -40,13 +36,11 @@ export class AdminController {
       throw new AppError('Usuário não encontrado.', 404);
     }
 
-    // Remove a senha da resposta por segurança
     const { password, ...userWithoutPassword } = user;
 
     return response.json(userWithoutPassword);
   }
 
-  // Aprovar um usuário e definir suas permissões (sem alterações)
   async approveUser(request: Request, response: Response) {
     const { userId } = request.params;
     const { permissions } = request.body;
@@ -76,7 +70,6 @@ export class AdminController {
     return response.json({ message: 'Usuário aprovado com sucesso!', user: { id: updatedUser.id, status: updatedUser.status } });
   }
 
-  // Recusar um usuário (sem alterações)
   async rejectUser(request: Request, response: Response) {
     const { userId } = request.params;
     await prisma.user.update({
@@ -86,7 +79,6 @@ export class AdminController {
     return response.status(204).send();
   }
 
-  // Editar permissões de um usuário já ativo (sem alterações)
   async updateUserPermissions(request: Request, response: Response) {
     const { userId } = request.params;
     const { permissions } = request.body;
@@ -111,11 +103,111 @@ export class AdminController {
     return response.json({ message: 'Permissões do usuário atualizadas com sucesso.' });
   }
 
-  // Listar todas as permissões cadastradas no sistema (sem alterações)
   async listAllPermissions(request: Request, response: Response) {
     const permissions = await prisma.permission.findMany({
       orderBy: { action: 'asc' },
     });
     return response.json(permissions);
+  }
+
+  async bulkAction(request: Request, response: Response) {
+    const { userIds, action } = request.body;
+
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      throw new AppError('É necessário fornecer um array de IDs de usuário.', 400);
+    }
+    if (action !== 'approve' && action !== 'reject') {
+      throw new AppError('Ação inválida. Use "approve" ou "reject".', 400);
+    }
+
+    if (action === 'approve') {
+      await prisma.user.updateMany({
+        where: {
+          id: { in: userIds },
+          status: 'PENDENTE',
+        },
+        data: {
+          status: 'ATIVO',
+        },
+      });
+    } else if (action === 'reject') {
+      await prisma.user.updateMany({
+        where: {
+          id: { in: userIds },
+          status: 'PENDENTE',
+        },
+        data: {
+          status: 'RECUSADO',
+        },
+      });
+    }
+
+    return response.status(200).json({ message: `Ação '${action}' executada com sucesso para ${userIds.length} usuários.` });
+  }
+
+  async getUserActivity(request: Request, response: Response) {
+    const { userId } = request.params;
+
+    const activityLogs = await prisma.activityLog.findMany({
+      where: { userId },
+      orderBy: { timestamp: 'desc' },
+      take: 50,
+    });
+
+    return response.json(activityLogs);
+  }
+
+  // --- NOVO MÉTODO PARA LISTAR TODAS AS ATIVIDADES COM FILTROS ---
+  async listAllActivities(request: Request, response: Response) {
+    const { userId, dataInicio, dataFim, page = 1, pageSize = 15 } = request.query;
+
+    const pageNumber = Number(page);
+    const size = Number(pageSize);
+    const skip = (pageNumber - 1) * size;
+
+    const where: any = {};
+
+    if (userId && typeof userId === 'string') {
+      where.userId = userId;
+    }
+
+    if (dataInicio || dataFim) {
+      where.timestamp = {};
+      if (dataInicio && typeof dataInicio === 'string') {
+        where.timestamp.gte = startOfDay(new Date(dataInicio));
+      }
+      if (dataFim && typeof dataFim === 'string') {
+        where.timestamp.lte = endOfDay(new Date(dataFim));
+      }
+    }
+
+    const [totalLogs, logs] = await prisma.$transaction([
+      prisma.activityLog.count({ where }),
+      prisma.activityLog.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              name: true,
+            },
+          },
+        },
+        orderBy: { timestamp: 'desc' },
+        take: size,
+        skip: skip,
+      }),
+    ]);
+
+    const totalPages = Math.ceil(totalLogs / size);
+
+    return response.json({
+      data: logs,
+      meta: {
+        totalItems: totalLogs,
+        totalPages,
+        currentPage: pageNumber,
+        pageSize: size,
+      },
+    });
   }
 }

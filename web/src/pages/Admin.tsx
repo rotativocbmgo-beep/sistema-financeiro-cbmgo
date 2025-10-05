@@ -1,13 +1,14 @@
 // web/src/pages/Admin.tsx
 
-import { useState, useEffect, useCallback, useRef } from 'react'; // 1. Adicionar useRef
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import toast from 'react-hot-toast';
 import { useLayout } from '../contexts/LayoutContext';
 import { Skeleton } from '../components/Skeleton';
 import { Check, X, Pencil } from '@phosphor-icons/react';
 
-// --- Interfaces (sem alterações) ---
+// --- Interfaces ---
 interface User {
   id: string;
   name: string;
@@ -24,23 +25,29 @@ interface Permission {
 
 type StatusTab = 'PENDENTE' | 'ATIVO' | 'RECUSADO';
 
-// --- Componente de Edição (Modal) - MODIFICADO ---
+// --- Componente de Skeleton para Mobile ---
+function UserCardSkeleton() {
+  return (
+    <div className="space-y-4">
+      {Array.from({ length: 4 }).map((_, index) => (
+        <div key={index} className="bg-gray-800 p-4 rounded-lg shadow-md animate-pulse">
+          <div className="mb-3">
+            <Skeleton className="h-5 w-3/5 mb-2" />
+            <Skeleton className="h-4 w-4/5" />
+          </div>
+          <div className="flex justify-end gap-4 border-t border-gray-700 pt-3">
+            <Skeleton className="h-8 w-24 rounded-md" />
+            <Skeleton className="h-8 w-24 rounded-md" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// --- Componente de Edição (Modal) ---
 function EditPermissionsModal({ user, allPermissions, onClose, onSave }: { user: User; allPermissions: Permission[]; onClose: () => void; onSave: (userId: string, permissions: string[]) => void; }) {
   const [selectedPermissions, setSelectedPermissions] = useState<Set<string>>(() => new Set(user.permissions.map(p => p.action)));
-  
-  // 2. Criar uma referência para o checkbox "mestre"
-  const masterCheckboxRef = useRef<HTMLInputElement>(null);
-
-  // 3. Efeito para controlar o estado (marcado, desmarcado, indeterminado) do checkbox mestre
-  useEffect(() => {
-    if (masterCheckboxRef.current) {
-      const allSelected = selectedPermissions.size === allPermissions.length;
-      const someSelected = selectedPermissions.size > 0 && !allSelected;
-      
-      masterCheckboxRef.current.checked = allSelected;
-      masterCheckboxRef.current.indeterminate = someSelected;
-    }
-  }, [selectedPermissions, allPermissions.length]);
 
   const handleCheckboxChange = (action: string) => {
     setSelectedPermissions(prev => {
@@ -54,18 +61,6 @@ function EditPermissionsModal({ user, allPermissions, onClose, onSave }: { user:
     });
   };
 
-  // 4. Função para marcar/desmarcar todos
-  const handleSelectAll = () => {
-    if (selectedPermissions.size === allPermissions.length) {
-      // Se todos estão selecionados, desmarca todos
-      setSelectedPermissions(new Set());
-    } else {
-      // Se alguns ou nenhum estão selecionados, marca todos
-      const allPermissionActions = new Set(allPermissions.map(p => p.action));
-      setSelectedPermissions(allPermissionActions);
-    }
-  };
-
   const handleSave = () => {
     onSave(user.id, Array.from(selectedPermissions));
   };
@@ -73,22 +68,8 @@ function EditPermissionsModal({ user, allPermissions, onClose, onSave }: { user:
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4">
       <div className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] flex flex-col">
-        <div className="flex justify-between items-center mb-4 border-b border-gray-700 pb-4">
-            <div>
-                <h3 className="text-xl font-bold text-purple-400 mb-1">Editar Permissões</h3>
-                <p className="text-gray-400">Usuário: <span className="font-semibold text-white">{user.name}</span></p>
-            </div>
-            {/* 5. Adicionar o checkbox "Marcar Todos" */}
-            <label className="flex items-center gap-2 cursor-pointer bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-md">
-                <input
-                    ref={masterCheckboxRef}
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-purple-500 focus:ring-purple-600"
-                    onChange={handleSelectAll}
-                />
-                <span className="text-sm font-semibold text-white">Marcar Todos</span>
-            </label>
-        </div>
+        <h3 className="text-xl font-bold text-purple-400 mb-1">Editar Permissões</h3>
+        <p className="text-gray-400 mb-4">Usuário: <span className="font-semibold text-white">{user.name}</span></p>
         
         <div className="overflow-y-auto flex-grow pr-2">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -119,7 +100,7 @@ function EditPermissionsModal({ user, allPermissions, onClose, onSave }: { user:
 }
 
 
-// --- Componente Principal (sem alterações) ---
+// --- Componente Principal ---
 export function Admin() {
   const { setPageTitle } = useLayout();
   const [users, setUsers] = useState<User[]>([]);
@@ -127,6 +108,12 @@ export function Admin() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<StatusTab>('PENDENTE');
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [isSubmittingBulk, setIsSubmittingBulk] = useState(false);
+
+  const allUserIdsOnPage = useMemo(() => users.map(u => u.id), [users]);
+  const isAllSelected = useMemo(() => users.length > 0 && selectedUsers.size === users.length, [selectedUsers, users.length]);
 
   useEffect(() => {
     setPageTitle("Administração");
@@ -134,6 +121,7 @@ export function Admin() {
 
   const fetchUsers = useCallback((status: StatusTab) => {
     setLoading(true);
+    setSelectedUsers(new Set());
     api.get('/admin/users', { params: { status } })
       .then(response => setUsers(response.data))
       .catch(() => toast.error(`Falha ao buscar usuários ${status.toLowerCase()}.`))
@@ -152,6 +140,55 @@ export function Admin() {
       fetchAllPermissions();
     }
   }, [activeTab, fetchUsers, fetchAllPermissions, allPermissions.length]);
+
+  const handleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedUsers(new Set());
+    } else {
+      setSelectedUsers(new Set(allUserIdsOnPage));
+    }
+  };
+
+  const handleSelectUser = (userId: string) => {
+    setSelectedUsers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(userId)) {
+        newSet.delete(userId);
+      } else {
+        newSet.add(userId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleBulkAction = async (action: 'approve' | 'reject') => {
+    if (selectedUsers.size === 0) {
+      toast.error("Nenhum usuário selecionado.");
+      return;
+    }
+
+    const confirmationText = action === 'approve'
+      ? `Tem certeza que deseja aprovar ${selectedUsers.size} usuários?`
+      : `Tem certeza que deseja recusar ${selectedUsers.size} usuários?`;
+
+    if (!window.confirm(confirmationText)) return;
+
+    setIsSubmittingBulk(true);
+    const toastId = toast.loading("Processando ação em lote...");
+
+    try {
+      await api.post('/admin/users/bulk-action', {
+        userIds: Array.from(selectedUsers),
+        action: action,
+      });
+      toast.success("Ação em lote concluída com sucesso!", { id: toastId });
+      fetchUsers(activeTab);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Falha ao processar a ação em lote.", { id: toastId });
+    } finally {
+      setIsSubmittingBulk(false);
+    }
+  };
 
   const handleAction = async (action: 'approve' | 'reject', userId: string) => {
     if (action === 'reject') {
@@ -201,17 +238,29 @@ export function Admin() {
   const TabButton = ({ status, label }: { status: StatusTab, label: string }) => (
     <button
       onClick={() => setActiveTab(status)}
-      className={`px-4 py-2 text-sm font-medium rounded-md ${activeTab === status ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
+      className={`w-full text-center px-4 py-2 text-sm font-medium rounded-md ${activeTab === status ? 'bg-purple-600 text-white' : 'text-gray-300 hover:bg-gray-700'}`}
     >
       {label}
     </button>
   );
 
   return (
-    <div className="bg-gray-900 p-6 rounded-lg shadow-lg">
-      <div className="flex items-center justify-between mb-6 border-b border-gray-700 pb-4">
+    <div className="bg-gray-900 p-4 sm:p-6 rounded-lg shadow-lg">
+      {selectedUsers.size > 0 && activeTab === 'PENDENTE' && (
+        <div className="fixed bottom-20 md:bottom-4 left-1/2 -translate-x-1/2 z-40 bg-gray-700 p-3 rounded-lg shadow-lg flex items-center gap-4 animate-pulse">
+          <span className="text-sm font-medium text-white">{selectedUsers.size} selecionado(s)</span>
+          <button onClick={() => handleBulkAction('approve')} disabled={isSubmittingBulk} className="flex items-center gap-1 text-sm bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-lg disabled:opacity-50">
+            <Check size={16} /> Aprovar
+          </button>
+          <button onClick={() => handleBulkAction('reject')} disabled={isSubmittingBulk} className="flex items-center gap-1 text-sm bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-3 rounded-lg disabled:opacity-50">
+            <X size={16} /> Recusar
+          </button>
+        </div>
+      )}
+
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 border-b border-gray-700 pb-4 gap-4">
         <h1 className="text-2xl font-bold text-white">Gerenciar Usuários</h1>
-        <div className="flex space-x-2 bg-gray-800 p-1 rounded-lg">
+        <div className="flex w-full sm:w-auto space-x-1 bg-gray-800 p-1 rounded-lg">
           <TabButton status="PENDENTE" label="Pendentes" />
           <TabButton status="ATIVO" label="Ativos" />
           <TabButton status="RECUSADO" label="Recusados" />
@@ -219,44 +268,105 @@ export function Admin() {
       </div>
 
       {loading ? (
-        <Skeleton className="h-64 w-full" />
+        <div className="md:hidden"><UserCardSkeleton /></div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-700">
-            <thead className="bg-gray-800">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Nome</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Email</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="bg-gray-900 divide-y divide-gray-700">
-              {users.length > 0 ? users.map(user => (
-                <tr key={user.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{user.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">{user.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                    <div className="flex justify-center items-center gap-4">
-                      {activeTab === 'PENDENTE' && (
-                        <>
-                          <button onClick={() => handleAction('approve', user.id)} className="text-green-400 hover:text-green-300 flex items-center gap-1"><Check size={18} /> Aprovar</button>
-                          <button onClick={() => handleAction('reject', user.id)} className="text-red-400 hover:text-red-300 flex items-center gap-1"><X size={18} /> Recusar</button>
-                        </>
-                      )}
-                      {activeTab === 'ATIVO' && (
-                        <button onClick={() => handleAction('approve', user.id)} className="text-blue-400 hover:text-blue-300 flex items-center gap-1"><Pencil size={18} /> Editar Permissões</button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              )) : (
+        <>
+          <div className="hidden md:block overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-700">
+              <thead className="bg-gray-800">
                 <tr>
-                  <td colSpan={3} className="text-center py-10 text-gray-500">Nenhum usuário encontrado nesta categoria.</td>
+                  <th className="px-6 py-3 w-12">
+                    {activeTab === 'PENDENTE' && (
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-purple-500 focus:ring-purple-600"
+                        checked={isAllSelected}
+                        onChange={handleSelectAll}
+                        aria-label="Selecionar todos"
+                      />
+                    )}
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Nome</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase">Email</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase">Ações</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="bg-gray-900 divide-y divide-gray-700">
+                {users.length > 0 ? users.map(user => (
+                  <tr key={user.id} className={`transition-colors ${selectedUsers.has(user.id) ? 'bg-purple-900/30' : ''}`}>
+                    <td className="px-6 py-4">
+                      {activeTab === 'PENDENTE' && (
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-purple-500 focus:ring-purple-600"
+                          checked={selectedUsers.has(user.id)}
+                          onChange={() => handleSelectUser(user.id)}
+                        />
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
+                      <Link to={`/admin/users/${user.id}`} className="hover:underline">
+                        {user.name}
+                      </Link>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">{user.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+                      <div className="flex justify-center items-center gap-4">
+                        {activeTab === 'PENDENTE' && (
+                          <>
+                            <button onClick={() => handleAction('approve', user.id)} className="text-green-400 hover:text-green-300 flex items-center gap-1"><Check size={18} /> Aprovar</button>
+                            <button onClick={() => handleAction('reject', user.id)} className="text-red-400 hover:text-red-300 flex items-center gap-1"><X size={18} /> Recusar</button>
+                          </>
+                        )}
+                        {activeTab === 'ATIVO' && (
+                          <button onClick={() => handleAction('approve', user.id)} className="text-blue-400 hover:text-blue-300 flex items-center gap-1"><Pencil size={18} /> Editar Permissões</button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr><td colSpan={4} className="text-center py-10 text-gray-500">Nenhum usuário encontrado nesta categoria.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="md:hidden space-y-4">
+            {users.length > 0 ? users.map(user => (
+              <div key={user.id} className={`bg-gray-800 p-4 rounded-lg shadow-md transition-colors ${selectedUsers.has(user.id) ? 'ring-2 ring-purple-500' : ''}`}>
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-grow">
+                    <Link to={`/admin/users/${user.id}`} className="font-bold text-white break-words hover:underline">
+                      {user.name}
+                    </Link>
+                    <p className="text-sm text-gray-400 break-words">{user.email}</p>
+                  </div>
+                  {activeTab === 'PENDENTE' && (
+                    <input
+                      type="checkbox"
+                      className="ml-4 h-5 w-5 rounded border-gray-500 bg-gray-600 text-purple-500 focus:ring-purple-600 flex-shrink-0"
+                      checked={selectedUsers.has(user.id)}
+                      onChange={() => handleSelectUser(user.id)}
+                    />
+                  )}
+                </div>
+                <div className="flex justify-end items-center gap-3 border-t border-gray-700 pt-3">
+                  {activeTab === 'PENDENTE' && (
+                    <>
+                      <button onClick={() => handleAction('approve', user.id)} className="flex items-center gap-1 text-sm bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-3 rounded-lg"><Check size={16} /> Aprovar</button>
+                      <button onClick={() => handleAction('reject', user.id)} className="flex items-center gap-1 text-sm bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-3 rounded-lg"><X size={16} /> Recusar</button>
+                    </>
+                  )}
+                  {activeTab === 'ATIVO' && (
+                    <button onClick={() => handleAction('approve', user.id)} className="flex items-center gap-1 text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded-lg"><Pencil size={16} /> Editar</button>
+                  )}
+                </div>
+              </div>
+            )) : (
+              <div className="text-center py-10 text-gray-500">Nenhum usuário encontrado nesta categoria.</div>
+            )}
+          </div>
+        </>
       )}
 
       {editingUser && (
