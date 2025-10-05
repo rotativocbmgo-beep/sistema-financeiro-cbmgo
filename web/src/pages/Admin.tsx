@@ -96,7 +96,6 @@ export function Admin() {
     setLoading(true);
     api.get('/admin/users', { params: { status } })
       .then(response => setUsers(response.data))
-      // CORREÇÃO: Variável 'err' removida
       .catch(() => toast.error(`Falha ao buscar usuários ${status.toLowerCase()}.`))
       .finally(() => setLoading(false));
   }, []);
@@ -104,7 +103,6 @@ export function Admin() {
   const fetchAllPermissions = useCallback(() => {
     api.get('/admin/permissions')
       .then(response => setAllPermissions(response.data))
-      // CORREÇÃO: Variável 'err' removida
       .catch(() => toast.error("Falha ao buscar a lista de permissões."));
   }, []);
 
@@ -115,23 +113,36 @@ export function Admin() {
     }
   }, [activeTab, fetchUsers, fetchAllPermissions, allPermissions.length]);
 
+  // --- FUNÇÃO MODIFICADA ---
   const handleAction = async (action: 'approve' | 'reject', userId: string) => {
-    const originalUsers = [...users];
-    setUsers(users.filter(u => u.id !== userId)); // Otimista
-
-    try {
-      if (action === 'approve') {
-        const userToApprove = originalUsers.find(u => u.id === userId);
-        if (userToApprove) {
-          setEditingUser(userToApprove);
-        }
-      } else { // Rejeitar
+    // Ação de rejeitar não precisa de dados completos, pode ser rápida
+    if (action === 'reject') {
+      const originalUsers = [...users];
+      setUsers(users.filter(u => u.id !== userId)); // Atualização otimista
+      try {
         await api.patch(`/admin/users/${userId}/reject`);
         toast.success("Usuário recusado.");
+      } catch (error) {
+        toast.error("Falha ao processar a ação.");
+        setUsers(originalUsers); // Reverte em caso de erro
       }
-    } catch (error) {
-      toast.error("Falha ao processar a ação.");
-      setUsers(originalUsers); // Reverte
+      return;
+    }
+
+    // Ação de aprovar/editar agora busca os dados completos do usuário
+    if (action === 'approve') {
+      const toastId = toast.loading("Carregando dados do usuário...");
+      try {
+        // Busca os dados completos do usuário, incluindo suas permissões
+        const response = await api.get(`/admin/users/${userId}`); 
+        
+        // Define o usuário para edição com os dados completos recebidos
+        setEditingUser(response.data);
+        
+        toast.dismiss(toastId); // Fecha o toast de carregamento
+      } catch (error) {
+        toast.error("Falha ao carregar os dados do usuário.", { id: toastId });
+      }
     }
   };
 
@@ -200,7 +211,8 @@ export function Admin() {
                         </>
                       )}
                       {activeTab === 'ATIVO' && (
-                        <button onClick={() => setEditingUser(user)} className="text-blue-400 hover:text-blue-300 flex items-center gap-1"><Pencil size={18} /> Editar Permissões</button>
+                        // Ação de editar para usuários ativos também usará a busca de dados completos
+                        <button onClick={() => handleAction('approve', user.id)} className="text-blue-400 hover:text-blue-300 flex items-center gap-1"><Pencil size={18} /> Editar Permissões</button>
                       )}
                     </div>
                   </td>
@@ -226,4 +238,3 @@ export function Admin() {
     </div>
   );
 }
-// ajuste env
