@@ -4,40 +4,45 @@ import 'dotenv/config';
 import 'express-async-errors';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import path from 'path'; // Importar o 'path' do Node.js
+import path from 'path';
 import { PrismaClient } from '@prisma/client';
 import router from './routes';
 import { AppError } from './errors/AppError';
 import uploadConfig from './config/upload';
 
-const app = express( );
+const app = express();
 
 export const prisma = new PrismaClient();
 
-// --- LÓGICA DE CORS ATUALIZADA ---
+// --- LÓGICA DE CORS ATUALIZADA E ROBUSTA ---
 
-// 1. Define as origens permitidas
-const allowedOrigins = [
-  'https://sistema-financeiro-cbmgo.vercel.app', // Frontend em produção
-];
+// 1. Define a origem de produção principal a partir das variáveis de ambiente.
+//    Isso torna o código mais flexível se a URL do frontend mudar no futuro.
+const productionOrigin = process.env.CORS_ORIGIN || 'https://sistema-financeiro-cbmgo.vercel.app';
 
-// 2. Em ambiente de desenvolvimento, adiciona as URLs locais à lista
-if (process.env.NODE_ENV !== 'production' ) {
-  allowedOrigins.push('http://localhost:5173' ); // Frontend local (Vite)
-  allowedOrigins.push('http://localhost:5174' ); // Frontend local (Preview do Vite)
+// 2. Inicia a lista de origens permitidas com a URL de produção.
+const allowedOrigins = [productionOrigin];
+
+// 3. Em ambiente de desenvolvimento (ou qualquer ambiente que não seja 'production' ),
+//    adiciona as URLs locais à lista para permitir testes.
+if (process.env.NODE_ENV !== 'production') {
+  allowedOrigins.push('http://localhost:5173' ); // Frontend local (Vite dev)
+  allowedOrigins.push('http://localhost:5174' ); // Frontend local (Vite preview)
 }
 
-// 3. Configura o middleware do CORS
+// 4. Configura o middleware do CORS de forma dinâmica.
 app.use(cors({
   origin: function (origin, callback) {
-    // Permite requisições sem 'origin' (como Postman, Insomnia, ou apps mobile)
-    if (!origin) return callback(null, true);
+    // Permite requisições sem 'origin' (ex: Postman, Insomnia, apps mobile).
+    if (!origin) {
+      return callback(null, true);
+    }
 
-    // Se a origem da requisição estiver na nossa lista, permite
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    // Se a origem da requisição estiver na nossa lista de permitidas, autoriza.
+    if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     } else {
-      // Se não estiver, rejeita com um erro de CORS
+      // Se não estiver, rejeita a requisição com um erro específico de CORS.
       return callback(new Error('A política de CORS para este site não permite acesso da origem especificada.'));
     }
   },
@@ -45,14 +50,16 @@ app.use(cors({
   credentials: true,
 }));
 
-
-app.use(express.json());
-
-// Rota para servir arquivos de upload
+// Middleware para servir arquivos estáticos da pasta 'uploads'
 app.use('/files', express.static(uploadConfig.directory));
 
+// Middleware para interpretar JSON no corpo das requisições
+app.use(express.json());
+
+// Registra todas as rotas da aplicação
 app.use(router);
 
+// Middleware para tratamento de erros global
 app.use((err: Error, request: Request, response: Response, _: NextFunction) => {
   if (err instanceof AppError) {
     return response.status(err.statusCode).json({
@@ -61,6 +68,7 @@ app.use((err: Error, request: Request, response: Response, _: NextFunction) => {
     });
   }
 
+  // Log do erro no console do servidor para depuração
   console.error(err);
 
   return response.status(500).json({
@@ -69,10 +77,11 @@ app.use((err: Error, request: Request, response: Response, _: NextFunction) => {
   });
 });
 
+// Inicialização do servidor
 const PORT = process.env.PORT || 3333;
 app.listen(PORT, () => {
   console.log(`🚀 Server started on port ${PORT}!`);
-  // Log para confirmar o ambiente
-  console.log(`[CORS] Rodando em modo: ${process.env.NODE_ENV || 'development'}`);
+  // Logs para facilitar a depuração do CORS no deploy
+  console.log(`[CORS] Ambiente (NODE_ENV): ${process.env.NODE_ENV || 'development'}`);
   console.log('[CORS] Origens permitidas:', allowedOrigins);
 });
