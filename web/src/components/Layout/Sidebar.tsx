@@ -1,9 +1,8 @@
-// web/src/components/Layout/Sidebar.tsx
-
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { usePermissions } from "../../hooks/usePermissions";
-import { Power, Gear, ChartBar, Bank, Files, Users, ClipboardText } from "@phosphor-icons/react";
+// CORREÇÃO: Adicionado o ícone 'Clock' para o novo link
+import { Power, Gear, ChartBar, Bank, Files, Users, ClipboardText, Clock } from "@phosphor-icons/react";
 
 export function Sidebar() {
   const { user, logout } = useAuth();
@@ -44,7 +43,6 @@ export function Sidebar() {
             Processos
           </NavLink>
           
-          {/* Link para Relatórios (condicional) */}
           {canViewReports && (
             <NavLink to="/reports" className={({ isActive }) => `${navLinkStyle} ${isActive ? activeNavLinkStyle : ''}`}>
               <ClipboardText size={18} />
@@ -52,12 +50,18 @@ export function Sidebar() {
             </NavLink>
           )}
           
-          {/* Link para Admin (condicional) */}
           {canManageUsers && (
-            <NavLink to="/admin" className={({ isActive }) => `${navLinkStyle} ${isActive ? activeNavLinkStyle : ''}`}>
-              <Users size={18} />
-              Administração
-            </NavLink>
+            <>
+              <NavLink to="/admin" className={({ isActive }) => `${navLinkStyle} ${isActive ? activeNavLinkStyle : ''}`}>
+                <Users size={18} />
+                Administração
+              </NavLink>
+              {/* CORREÇÃO: Adicionado o novo link para o Histórico de Atividades */}
+              <NavLink to="/admin/history" className={({ isActive }) => `${navLinkStyle} ${isActive ? activeNavLinkStyle : ''}`}>
+                <Clock size={18} />
+                Histórico de Atividades
+              </NavLink>
+            </>
           )}
         </nav>
 

@@ -1,11 +1,11 @@
-// api/src/controllers/AdminController.ts
-
 import { Request, Response } from 'express';
 import { prisma } from '../server';
 import { AppError } from '../errors/AppError';
+// CORREÇÃO: Importar as funções de data
 import { startOfDay, endOfDay } from 'date-fns';
 
 export class AdminController {
+  // ... (métodos listUsers, getUserById, approveUser, etc. permanecem inalterados)
   async listUsers(request: Request, response: Response) {
     const { status } = request.query;
 
@@ -157,7 +157,7 @@ export class AdminController {
     return response.json(activityLogs);
   }
 
-  // --- NOVO MÉTODO PARA LISTAR TODAS AS ATIVIDADES COM FILTROS ---
+  // --- MÉTODO CORRIGIDO ---
   async listAllActivities(request: Request, response: Response) {
     const { userId, dataInicio, dataFim, page = 1, pageSize = 15 } = request.query;
 
@@ -171,12 +171,15 @@ export class AdminController {
       where.userId = userId;
     }
 
+    // CORREÇÃO APLICADA AQUI
     if (dataInicio || dataFim) {
       where.timestamp = {};
       if (dataInicio && typeof dataInicio === 'string') {
+        // Garante que o filtro comece no início do dia
         where.timestamp.gte = startOfDay(new Date(dataInicio));
       }
       if (dataFim && typeof dataFim === 'string') {
+        // Garante que o filtro termine no final do dia
         where.timestamp.lte = endOfDay(new Date(dataFim));
       }
     }
