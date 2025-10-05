@@ -1,13 +1,13 @@
 // web/src/pages/Admin.tsx
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'; // 1. Adicionar useRef
 import { api } from '../services/api';
 import toast from 'react-hot-toast';
 import { useLayout } from '../contexts/LayoutContext';
 import { Skeleton } from '../components/Skeleton';
 import { Check, X, Pencil } from '@phosphor-icons/react';
 
-// --- Interfaces ---
+// --- Interfaces (sem alterações) ---
 interface User {
   id: string;
   name: string;
@@ -24,9 +24,23 @@ interface Permission {
 
 type StatusTab = 'PENDENTE' | 'ATIVO' | 'RECUSADO';
 
-// --- Componente de Edição (Modal) ---
+// --- Componente de Edição (Modal) - MODIFICADO ---
 function EditPermissionsModal({ user, allPermissions, onClose, onSave }: { user: User; allPermissions: Permission[]; onClose: () => void; onSave: (userId: string, permissions: string[]) => void; }) {
   const [selectedPermissions, setSelectedPermissions] = useState<Set<string>>(() => new Set(user.permissions.map(p => p.action)));
+  
+  // 2. Criar uma referência para o checkbox "mestre"
+  const masterCheckboxRef = useRef<HTMLInputElement>(null);
+
+  // 3. Efeito para controlar o estado (marcado, desmarcado, indeterminado) do checkbox mestre
+  useEffect(() => {
+    if (masterCheckboxRef.current) {
+      const allSelected = selectedPermissions.size === allPermissions.length;
+      const someSelected = selectedPermissions.size > 0 && !allSelected;
+      
+      masterCheckboxRef.current.checked = allSelected;
+      masterCheckboxRef.current.indeterminate = someSelected;
+    }
+  }, [selectedPermissions, allPermissions.length]);
 
   const handleCheckboxChange = (action: string) => {
     setSelectedPermissions(prev => {
@@ -40,6 +54,18 @@ function EditPermissionsModal({ user, allPermissions, onClose, onSave }: { user:
     });
   };
 
+  // 4. Função para marcar/desmarcar todos
+  const handleSelectAll = () => {
+    if (selectedPermissions.size === allPermissions.length) {
+      // Se todos estão selecionados, desmarca todos
+      setSelectedPermissions(new Set());
+    } else {
+      // Se alguns ou nenhum estão selecionados, marca todos
+      const allPermissionActions = new Set(allPermissions.map(p => p.action));
+      setSelectedPermissions(allPermissionActions);
+    }
+  };
+
   const handleSave = () => {
     onSave(user.id, Array.from(selectedPermissions));
   };
@@ -47,8 +73,22 @@ function EditPermissionsModal({ user, allPermissions, onClose, onSave }: { user:
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50 p-4">
       <div className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] flex flex-col">
-        <h3 className="text-xl font-bold text-purple-400 mb-1">Editar Permissões</h3>
-        <p className="text-gray-400 mb-4">Usuário: <span className="font-semibold text-white">{user.name}</span></p>
+        <div className="flex justify-between items-center mb-4 border-b border-gray-700 pb-4">
+            <div>
+                <h3 className="text-xl font-bold text-purple-400 mb-1">Editar Permissões</h3>
+                <p className="text-gray-400">Usuário: <span className="font-semibold text-white">{user.name}</span></p>
+            </div>
+            {/* 5. Adicionar o checkbox "Marcar Todos" */}
+            <label className="flex items-center gap-2 cursor-pointer bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-md">
+                <input
+                    ref={masterCheckboxRef}
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-purple-500 focus:ring-purple-600"
+                    onChange={handleSelectAll}
+                />
+                <span className="text-sm font-semibold text-white">Marcar Todos</span>
+            </label>
+        </div>
         
         <div className="overflow-y-auto flex-grow pr-2">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -79,7 +119,7 @@ function EditPermissionsModal({ user, allPermissions, onClose, onSave }: { user:
 }
 
 
-// --- Componente Principal ---
+// --- Componente Principal (sem alterações) ---
 export function Admin() {
   const { setPageTitle } = useLayout();
   const [users, setUsers] = useState<User[]>([]);
@@ -113,33 +153,26 @@ export function Admin() {
     }
   }, [activeTab, fetchUsers, fetchAllPermissions, allPermissions.length]);
 
-  // --- FUNÇÃO MODIFICADA ---
   const handleAction = async (action: 'approve' | 'reject', userId: string) => {
-    // Ação de rejeitar não precisa de dados completos, pode ser rápida
     if (action === 'reject') {
       const originalUsers = [...users];
-      setUsers(users.filter(u => u.id !== userId)); // Atualização otimista
+      setUsers(users.filter(u => u.id !== userId));
       try {
         await api.patch(`/admin/users/${userId}/reject`);
         toast.success("Usuário recusado.");
       } catch (error) {
         toast.error("Falha ao processar a ação.");
-        setUsers(originalUsers); // Reverte em caso de erro
+        setUsers(originalUsers);
       }
       return;
     }
 
-    // Ação de aprovar/editar agora busca os dados completos do usuário
     if (action === 'approve') {
       const toastId = toast.loading("Carregando dados do usuário...");
       try {
-        // Busca os dados completos do usuário, incluindo suas permissões
         const response = await api.get(`/admin/users/${userId}`); 
-        
-        // Define o usuário para edição com os dados completos recebidos
         setEditingUser(response.data);
-        
-        toast.dismiss(toastId); // Fecha o toast de carregamento
+        toast.dismiss(toastId);
       } catch (error) {
         toast.error("Falha ao carregar os dados do usuário.", { id: toastId });
       }
@@ -159,7 +192,7 @@ export function Admin() {
         toast.success("Permissões atualizadas!", { id: toastId });
       }
       setEditingUser(null);
-      fetchUsers(activeTab); // Re-busca os dados da aba atual
+      fetchUsers(activeTab);
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Falha ao salvar.", { id: toastId });
     }
@@ -211,7 +244,6 @@ export function Admin() {
                         </>
                       )}
                       {activeTab === 'ATIVO' && (
-                        // Ação de editar para usuários ativos também usará a busca de dados completos
                         <button onClick={() => handleAction('approve', user.id)} className="text-blue-400 hover:text-blue-300 flex items-center gap-1"><Pencil size={18} /> Editar Permissões</button>
                       )}
                     </div>
