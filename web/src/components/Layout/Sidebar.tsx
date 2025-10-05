@@ -1,9 +1,13 @@
+// web/src/components/Layout/Sidebar.tsx
+
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { Power, Gear, ChartBar, Bank, Files } from "@phosphor-icons/react";
+import { usePermissions } from "../../hooks/usePermissions";
+import { Power, Gear, ChartBar, Bank, Files, Users, ClipboardText } from "@phosphor-icons/react";
 
 export function Sidebar() {
   const { user, logout } = useAuth();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -14,9 +18,11 @@ export function Sidebar() {
   const navLinkStyle = "flex items-center gap-3 rounded-lg px-3 py-2 text-gray-300 transition-all hover:bg-gray-700 hover:text-white";
   const activeNavLinkStyle = "bg-gray-700 text-white";
 
+  const canManageUsers = hasPermission('usuario:gerenciar');
+  const canViewReports = hasPermission('relatorio:visualizar');
+
   return (
     <div className="flex h-full max-h-screen flex-col gap-2 bg-gray-900">
-      {/* CORREÇÃO: A borda inferior foi adicionada de volta aqui */}
       <div className="flex h-16 items-center border-b border-gray-700 px-6">
         <Link to="/" className="flex items-center gap-2 font-semibold text-white">
           <Bank size={24} className="text-cyan-400" />
@@ -37,6 +43,22 @@ export function Sidebar() {
             <Files size={18} />
             Processos
           </NavLink>
+          
+          {/* Link para Relatórios (condicional) */}
+          {canViewReports && (
+            <NavLink to="/reports" className={({ isActive }) => `${navLinkStyle} ${isActive ? activeNavLinkStyle : ''}`}>
+              <ClipboardText size={18} />
+              Relatórios
+            </NavLink>
+          )}
+          
+          {/* Link para Admin (condicional) */}
+          {canManageUsers && (
+            <NavLink to="/admin" className={({ isActive }) => `${navLinkStyle} ${isActive ? activeNavLinkStyle : ''}`}>
+              <Users size={18} />
+              Administração
+            </NavLink>
+          )}
         </nav>
 
         <div className="mt-6 px-4 space-y-2">
