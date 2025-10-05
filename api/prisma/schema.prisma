@@ -11,60 +11,89 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// Enum para definir os papéis de usuário permitidos
-enum Role {
-  USER
-  ADMIN
+// --- ENUMS ---
+
+enum UserStatus {
+  PENDENTE
+  ATIVO
+  RECUSADO
 }
 
-// Enum para o status do processo
 enum StatusProcesso {
   PENDENTE
   LIQUIDADO
 }
 
-// Enum para o tipo de lançamento
 enum TipoLancamento {
   CREDITO
   DEBITO
 }
 
+enum ReportStatus {
+  RASCUNHO
+  FINALIZADO
+  ASSINADO
+}
+
+
+// --- MODELS ---
+
 model User {
   id        String   @id @default(uuid())
   name      String
   email     String   @unique
-  password  String
-  role      Role     @default(USER)
+  password  String? // Senha se torna opcional para permitir login com Google
+  googleId  String?  @unique // ID do usuário vindo do Google
+  status    UserStatus @default(PENDENTE) // Status para controle de aprovação
+
   settings  UserSettings?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relações
-  processos  Processo[]
+  processos   Processo[]
   lancamentos Lancamento[]
+  reports     Report[]
+  signatures  Signature[]
+  permissions Permission[] @relation("UserPermissions")
 
-  @@map("users") // <-- ADICIONADO
+  @@map("users")
+}
+
+model Permission {
+  id          String @id @default(uuid())
+  action      String @unique // Ex: "lancamento:criar:debito"
+  description String
+
+  // Relação
+  users User[] @relation("UserPermissions")
+
+  @@map("permissions")
 }
 
 model UserSettings {
   id                            String   @id @default(uuid())
   user                          User     @relation(fields: [userId], references: [id])
   userId                        String   @unique
+  companyName                   String?
+  cnpj                          String?
+  address                       String?
+  logoUrl                       String?
   receber_notificacoes_processo Boolean  @default(true)
   receber_notificacoes_pagamento Boolean  @default(true)
   receber_notificacoes_reposicao Boolean  @default(true)
   createdAt                     DateTime @default(now())
   updatedAt                     DateTime @updatedAt
 
-  @@map("user_settings") // <-- ADICIONADO
+  @@map("user_settings")
 }
 
 model Processo {
   id            String   @id @default(uuid())
   numero        String   @unique
   credor        String
-  empenhoNumero String
-  empenhoVerba  String
+  empenhoNumero String?
+  empenhoVerba  String?
   status        StatusProcesso @default(PENDENTE)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -74,7 +103,7 @@ model Processo {
   userId        String
   lancamentos   Lancamento[]
 
-  @@map("processos") // <-- ADICIONADO
+  @@map("processos")
 }
 
 model Lancamento {
@@ -92,5 +121,34 @@ model Lancamento {
   processo    Processo?  @relation(fields: [processoId], references: [id])
   processoId  String?
 
-  @@map("lancamentos") // <-- ADICIONADO
+  @@map("lancamentos")
+}
+
+model Report {
+  id        String       @id @default(uuid())
+  title     String
+  content   Json
+  status    ReportStatus @default(RASCUNHO)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  // Relações
+  creator   User         @relation(fields: [creatorId], references: [id])
+  creatorId String
+  signatures Signature[]
+
+  @@map("reports")
+}
+
+model Signature {
+  id        String   @id @default(uuid())
+  signedAt  DateTime @default(now())
+
+  // Relações
+  report    Report   @relation(fields: [reportId], references: [id])
+  reportId  String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+
+  @@map("signatures")
 }

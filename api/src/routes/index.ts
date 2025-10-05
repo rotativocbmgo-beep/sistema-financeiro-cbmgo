@@ -5,7 +5,9 @@ import usersRoutes from './users.routes';
 import sessionsRoutes from './sessions.routes';
 import settingsRoutes from './settings.routes';
 import dashboardRoutes from './dashboard.routes';
-import processosRoutes from './processos.routes'; // A importação deve estar aqui
+import processosRoutes from './processos.routes';
+import adminRoutes from './admin.routes';
+import reportsRoutes from './reports.routes'; // <-- IMPORTAR
 
 const router = Router();
 
@@ -13,10 +15,10 @@ const router = Router();
 router.use('/users', usersRoutes);
 router.use('/sessions', sessionsRoutes);
 router.use('/settings', settingsRoutes);
-
-// CORREÇÃO: Adicionando as rotas de processos e dashboard
 router.use('/processos', processosRoutes);
-router.use('/', dashboardRoutes); // Usando a raiz para as rotas de dados do dashboard
+router.use('/admin', adminRoutes);
+router.use('/reports', reportsRoutes); // <-- REGISTRAR
+router.use('/', dashboardRoutes);
 
 // Exportação padrão
 export default router;
