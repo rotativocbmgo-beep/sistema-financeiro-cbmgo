@@ -1,10 +1,13 @@
-import { useEffect, useState } from "react";
+// web/src/pages/DetalhesProcesso.tsx
+
+import { useEffect, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { api } from "@/services/api";
+import { api } from "../services/api";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import toast from "react-hot-toast";
+import toast from 'react-hot-toast'; // 1. Importar
 
+// ... (Interfaces permanecem as mesmas) ...
 interface Lancamento {
   id: string;
   historico: string;
@@ -23,6 +26,7 @@ interface Processo {
   lancamentos: Lancamento[];
 }
 
+
 export function DetalhesProcesso() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -30,69 +34,64 @@ export function DetalhesProcesso() {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const fetchProcesso = async () => {
+  const fetchProcesso = useCallback(async () => {
     if (!id) return;
     try {
-      // CORREÇÃO: Removido o prefixo /api/
       const response = await api.get(`/processos/${id}`);
       setProcesso(response.data);
     } catch (err) {
-      console.error("Erro ao buscar detalhes do processo:", err);
       toast.error("Processo não encontrado ou falha ao carregar dados.");
-      navigate('/');
+      navigate('/processos');
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate]);
 
   useEffect(() => {
     fetchProcesso();
-  }, [id]);
+  }, [fetchProcesso]);
 
   const handleLiquidar = async () => {
     if (!id || processo?.status === 'LIQUIDADO') return;
+    if (!window.confirm("Tem certeza que deseja liquidar este processo? Esta ação mudará seu status para LIQUIDADO.")) return;
 
-    if (!window.confirm("Tem certeza que deseja liquidar este processo? Esta ação mudará seu status para LIQUIDADO.")) {
-      return;
-    }
-
-    const loadingToast = toast.loading('Liquidando processo...');
     setIsSubmitting(true);
+    const toastId = toast.loading('Liquidando processo...'); // Feedback
+
     try {
-      // CORREÇÃO: Removido o prefixo /api/
       await api.patch(`/processos/${id}/liquidar`);
-      toast.success("Processo liquidado com sucesso!");
-      fetchProcesso(); // Re-busca os dados para atualizar o status na tela
+      toast.success("Processo liquidado com sucesso!", { id: toastId }); // 2. Substituir alert
+      fetchProcesso();
     } catch (error: any) {
-      const errorMessage = error.response?.data?.error || "Falha ao liquidar o processo.";
-      toast.error(errorMessage);
+      const message = error.response?.data?.message || "Falha ao liquidar o processo.";
+      toast.error(message, { id: toastId }); // 3. Substituir alert
     } finally {
-      toast.dismiss(loadingToast);
       setIsSubmitting(false);
     }
   };
 
+  // ... (O resto do JSX permanece o mesmo) ...
   if (loading) {
-    return <div className="min-h-screen bg-gray-800 text-white p-8 text-center">Carregando detalhes do processo...</div>;
+    return <div className="p-8 text-center">Carregando detalhes do processo...</div>;
   }
 
   if (!processo) {
-    return <div className="min-h-screen bg-gray-800 text-white p-8 text-center">Processo não encontrado.</div>;
+    return <div className="p-8 text-center">Processo não encontrado.</div>;
   }
 
   return (
-    <div className="min-h-screen bg-gray-800 text-white p-8">
-      <header className="mb-8 flex justify-between items-center max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto">
+      <header className="mb-8 flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-purple-400">Detalhes do Processo</h1>
           <p className="text-gray-400 font-mono">{processo.numero}</p>
         </div>
-        <Link to="/" className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-          &larr; Voltar ao Dashboard
+        <Link to="/processos" className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+          &larr; Voltar
         </Link>
       </header>
 
-      <main className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+      <main className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-2 bg-gray-900 p-6 rounded-lg shadow-lg">
           <div className="flex justify-between items-start mb-4 border-b border-gray-700 pb-2">
             <h2 className="text-xl font-bold">Informações Gerais</h2>
@@ -113,11 +112,11 @@ export function DetalhesProcesso() {
             </div>
             <div>
               <p className="text-sm text-gray-400">Nº do Empenho</p>
-              <p className="text-lg">{processo.empenhoNumero}</p>
+              <p className="text-lg">{processo.empenhoNumero || 'N/A'}</p>
             </div>
             <div>
               <p className="text-sm text-gray-400">Verba Orçamentária</p>
-              <p className="text-lg">{processo.empenhoVerba}</p>
+              <p className="text-lg">{processo.empenhoVerba || 'N/A'}</p>
             </div>
             <div>
               <p className="text-sm text-gray-400">Status</p>

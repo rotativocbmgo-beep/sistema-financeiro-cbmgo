@@ -1,8 +1,10 @@
-import React, { FormEvent, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { api } from "@/services/api";
-import Input from "@/components/Input";
-import toast from 'react-hot-toast';
+// web/src/pages/NovaReposicao.tsx
+
+import { FormEvent, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { api } from "../services/api";
+import toast from 'react-hot-toast'; // 1. Importar
+import Input from "../components/Input";
 
 export function NovaReposicao() {
   const navigate = useNavigate();
@@ -14,61 +16,47 @@ export function NovaReposicao() {
   async function handleCreateReposicao(event: FormEvent) {
     event.preventDefault();
     if (!data || !historico || !valor) {
-      toast.error("Por favor, preencha todos os campos.");
+      toast.error("Por favor, preencha todos os campos."); // 2. Substituir alert
       return;
     }
-
-    const loadingToast = toast.loading('Salvando reposição...');
     setIsSubmitting(true);
+    const toastId = toast.loading('Salvando reposição...'); // Feedback de carregamento
 
     try {
-      // CORREÇÃO: Removido o prefixo /api/
       await api.post('/reposicoes', {
         data,
         historico,
         valor: parseFloat(valor),
       });
-      
-      toast.success("Reposição cadastrada com sucesso!");
+      toast.success("Reposição cadastrada com sucesso!", { id: toastId }); // 3. Substituir alert
       navigate('/');
     } catch (error: any) {
       console.error("Erro ao cadastrar reposição:", error);
-      const errorMessage = error.response?.data?.error || "Falha ao cadastrar reposição.";
-      toast.error(errorMessage);
+      const message = error.response?.data?.message || "Falha ao cadastrar reposição.";
+      toast.error(message, { id: toastId }); // 4. Substituir alert
     } finally {
-      toast.dismiss(loadingToast);
       setIsSubmitting(false);
     }
   }
 
-  const handleInputChange = (setter: React.Dispatch<React.SetStateAction<string>>) => 
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      setter(e.target.value);
-  };
-
   return (
-    <div className="min-h-screen bg-gray-800 text-white p-8">
-      <header className="mb-8 flex justify-between items-center max-w-5xl mx-auto">
-        <div>
-          <h1 className="text-3xl font-bold text-yellow-400">Registrar Nova Reposição (Crédito)</h1>
-          <p className="text-gray-400">Preencha os dados do lançamento de crédito.</p>
-        </div>
-        <Link to="/" className="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-          &larr; Voltar ao Dashboard
-        </Link>
+    <div className="max-w-4xl mx-auto">
+      <header className="mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-yellow-400">Registrar Nova Reposição (Crédito)</h1>
+        <p className="text-gray-400">Insira os dados para adicionar um valor de crédito ao saldo.</p>
       </header>
 
       <main>
-        <form onSubmit={handleCreateReposicao} className="bg-gray-900 p-8 rounded-lg shadow-lg max-w-2xl mx-auto">
+        <form onSubmit={handleCreateReposicao} className="bg-gray-900 p-6 sm:p-8 rounded-lg shadow-lg">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="col-span-2">
-              <Input label="Histórico*" id="historico" type="text" value={historico} onChange={handleInputChange(setHistorico)} required />
+            <div className="md:col-span-2">
+              <Input label="Histórico*" id="historico" type="text" value={historico} onChange={e => setHistorico(e.target.value)} required />
             </div>
-            <Input label="Data da Reposição*" id="data" type="date" value={data} onChange={handleInputChange(setData)} required />
-            <Input label="Valor (R$)*" id="valor" type="number" step="0.01" placeholder="0.00" value={valor} onChange={handleInputChange(setValor)} required />
+            <Input label="Data da Reposição*" id="data" type="date" value={data} onChange={e => setData(e.target.value)} required />
+            <Input label="Valor (R$)*" id="valor" type="number" step="0.01" placeholder="0.00" value={valor} onChange={e => setValor(e.target.value)} required />
           </div>
-          <div className="mt-8 text-right">
-            <button type="submit" disabled={isSubmitting} className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          <div className="mt-8">
+            <button type="submit" disabled={isSubmitting} className="w-full sm:w-auto bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-6 rounded-lg transition-colors disabled:opacity-50">
               {isSubmitting ? 'Salvando...' : 'Salvar Reposição'}
             </button>
           </div>
