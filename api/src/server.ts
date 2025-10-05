@@ -3,36 +3,53 @@
 import 'dotenv/config';
 import 'express-async-errors';
 import express, { Request, Response, NextFunction } from 'express';
-import cors from 'cors'; // 1. O import já existe
+import cors from 'cors';
+import path from 'path'; // Importar o 'path' do Node.js
 import { PrismaClient } from '@prisma/client';
 import router from './routes';
 import { AppError } from './errors/AppError';
+import uploadConfig from './config/upload';
 
-const app = express();
+const app = express( );
 
 export const prisma = new PrismaClient();
 
-// 2. Definir as opções do CORS
-const corsOptions = {
-  // A origem permitida é a URL do seu frontend na Vercel.
-  // É crucial que não haja uma barra "/" no final da URL.
-  origin: 'https://sistema-financeiro-cbmgo.vercel.app', 
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE', // Permitir todos os métodos HTTP necessários
-  credentials: true, // Permitir o envio de cookies e cabeçalhos de autorização
-  optionsSuccessStatus: 204
-};
+// --- LÓGICA DE CORS ATUALIZADA ---
 
-// 3. Aplicar o middleware do CORS com as opções configuradas
-app.use(cors(corsOptions ));
+// 1. Define as origens permitidas
+const allowedOrigins = [
+  'https://sistema-financeiro-cbmgo.vercel.app', // Frontend em produção
+];
 
-// Habilitar o Express para entender requisições preflight (OPTIONS)
-// Isso é essencial para que o CORS funcione com requisições complexas.
-app.options('*', cors(corsOptions));
+// 2. Em ambiente de desenvolvimento, adiciona as URLs locais à lista
+if (process.env.NODE_ENV !== 'production' ) {
+  allowedOrigins.push('http://localhost:5173' ); // Frontend local (Vite)
+  allowedOrigins.push('http://localhost:5174' ); // Frontend local (Preview do Vite)
+}
+
+// 3. Configura o middleware do CORS
+app.use(cors({
+  origin: function (origin, callback) {
+    // Permite requisições sem 'origin' (como Postman, Insomnia, ou apps mobile)
+    if (!origin) return callback(null, true);
+
+    // Se a origem da requisição estiver na nossa lista, permite
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
+    } else {
+      // Se não estiver, rejeita com um erro de CORS
+      return callback(new Error('A política de CORS para este site não permite acesso da origem especificada.'));
+    }
+  },
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  credentials: true,
+}));
+
 
 app.use(express.json());
 
-// Adiciona uma rota para servir os arquivos da pasta 'uploads'
-app.use('/files', express.static('uploads'));
+// Rota para servir arquivos de upload
+app.use('/files', express.static(uploadConfig.directory));
 
 app.use(router);
 
@@ -55,4 +72,7 @@ app.use((err: Error, request: Request, response: Response, _: NextFunction) => {
 const PORT = process.env.PORT || 3333;
 app.listen(PORT, () => {
   console.log(`🚀 Server started on port ${PORT}!`);
+  // Log para confirmar o ambiente
+  console.log(`[CORS] Rodando em modo: ${process.env.NODE_ENV || 'development'}`);
+  console.log('[CORS] Origens permitidas:', allowedOrigins);
 });
