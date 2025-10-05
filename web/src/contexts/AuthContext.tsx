@@ -3,6 +3,7 @@
 import { createContext, useState, useContext, useEffect, useCallback, ReactNode } from 'react';
 import { api } from '../services/api';
 
+// --- Interfaces ---
 interface User {
   id: string;
   name: string;
@@ -23,35 +24,30 @@ interface AuthContextData {
   user: User | null;
   token: string | null;
   login(credentials: LoginCredentials): Promise<void>;
+  loginWithGoogle(code: string): Promise<void>; // <-- NOVA FUNÇÃO
   logout(): void;
   loading: boolean;
 }
 
+// --- Contexto ---
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 
+// --- Provider ---
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [data, setData] = useState<AuthState>(() => {
     const token = localStorage.getItem('@CbmgoFinanceiro:token');
     const user = localStorage.getItem('@CbmgoFinanceiro:user');
 
     if (token && user) {
-      // --- ESTA É A CORREÇÃO CRÍTICA ---
-      // Configura o cabeçalho do axios imediatamente ao carregar a aplicação,
-      // de forma síncrona, antes que qualquer outra chamada de API seja feita.
       api.defaults.headers.common.authorization = `Bearer ${token}`;
-      
       return { token, user: JSON.parse(user) };
     }
-
     return { token: null, user: null };
   });
 
-  // Este estado de loading agora é apenas para a tela inicial, se necessário.
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Como a verificação agora é síncrona na inicialização do useState,
-    // podemos remover o estado de loading rapidamente.
     setLoading(false);
   }, []);
 
@@ -61,11 +57,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     localStorage.setItem('@CbmgoFinanceiro:token', token);
     localStorage.setItem('@CbmgoFinanceiro:user', JSON.stringify(user));
-
     api.defaults.headers.common.authorization = `Bearer ${token}`;
-
     setData({ user, token });
   }, []);
+
+  // --- NOVA FUNÇÃO DE LOGIN COM GOOGLE ---
+  const loginWithGoogle = useCallback(async (code: string) => {
+    const response = await api.post('/auth/google/callback', { code });
+    const { user, token } = response.data;
+
+    localStorage.setItem('@CbmgoFinanceiro:token', token);
+    localStorage.setItem('@CbmgoFinanceiro:user', JSON.stringify(user));
+    api.defaults.headers.common.authorization = `Bearer ${token}`;
+    setData({ user, token });
+  }, []);
+
 
   const logout = useCallback(() => {
     localStorage.removeItem('@CbmgoFinanceiro:token');
@@ -75,12 +81,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user: data.user, token: data.token, login, logout, loading }}>
+    <AuthContext.Provider value={{ user: data.user, token: data.token, login, loginWithGoogle, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
+// --- Hook ---
 export function useAuth(): AuthContextData {
   const context = useContext(AuthContext);
   if (!context) {

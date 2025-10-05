@@ -1,6 +1,9 @@
-import React, { FormEvent, useState } from "react";
-import { useNavigate } from "react-router-dom"; // <-- REMOVIDO 'Link' DAQUI
+// web/src/pages/NovoPagamento.tsx
+
+import { FormEvent, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
+import toast from 'react-hot-toast'; // 1. Importar o toast
 import Input from "../components/Input";
 
 export function NovoPagamento() {
@@ -16,10 +19,13 @@ export function NovoPagamento() {
   async function handleCreatePagamento(event: FormEvent) {
     event.preventDefault();
     if (!numero || !credor || !valor || !dataPagamento) {
-      alert("Por favor, preencha os campos obrigatórios marcados com *");
+      // 2. Substituir alert por toast.error
+      toast.error("Por favor, preencha os campos obrigatórios marcados com *");
       return;
     }
     setIsSubmitting(true);
+    const toastId = toast.loading('Cadastrando pagamento...'); // Feedback de carregamento
+
     try {
       await api.post('/processos', {
         numero,
@@ -29,11 +35,14 @@ export function NovoPagamento() {
         dataPagamento,
         valor: parseFloat(valor),
       });
-      alert("Pagamento cadastrado com sucesso!");
+      // 3. Substituir alert por toast.success
+      toast.success("Pagamento cadastrado com sucesso!", { id: toastId });
       navigate('/processos');
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao cadastrar pagamento:", error);
-      alert("Falha ao cadastrar pagamento. Verifique os dados e tente novamente.");
+      const message = error.response?.data?.message || "Falha ao cadastrar pagamento.";
+      // 4. Substituir alert por toast.error com mensagem dinâmica
+      toast.error(message, { id: toastId });
     } finally {
       setIsSubmitting(false);
     }
