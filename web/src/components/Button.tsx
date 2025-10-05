@@ -1,6 +1,4 @@
-﻿// web/src/components/Button.tsx
-
-import { ButtonHTMLAttributes, ReactNode } from 'react';
+﻿import { ButtonHTMLAttributes, ReactNode } from 'react';
 import { Spinner } from './Spinner'; // 1. Importar o Spinner
 
 // 2. Atualizar a interface para incluir as novas propriedades

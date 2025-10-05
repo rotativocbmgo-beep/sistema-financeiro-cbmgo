@@ -1,5 +1,3 @@
-// web/src/components/Spinner.tsx
-
 import { SVGProps } from 'react';
 
 // A interface define que o componente aceita todas as propriedades de um SVG
@@ -24,5 +22,5 @@ export function Spinner(props: SpinnerProps) {
     >
       <path d="M21 12a9 9 0 1 1-6.219-8.56" />
     </svg>
-   );
+    );
 }
