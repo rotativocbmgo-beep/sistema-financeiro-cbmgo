@@ -1,7 +1,8 @@
+// web/src/components/Layout/Sidebar.tsx
+
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { usePermissions } from "../../hooks/usePermissions";
-// CORREÇÃO: Adicionado o ícone 'Clock' para o novo link
 import { Power, Gear, ChartBar, Bank, Files, Users, ClipboardText, Clock } from "@phosphor-icons/react";
 
 export function Sidebar() {
@@ -52,11 +53,19 @@ export function Sidebar() {
           
           {canManageUsers && (
             <>
-              <NavLink to="/admin" className={({ isActive }) => `${navLinkStyle} ${isActive ? activeNavLinkStyle : ''}`}>
+              {/* 
+                ======================================================================
+                == CORREÇÃO APLICADA AQUI ==
+                ======================================================================
+                Adicionamos a propriedade 'end' ao NavLink de "Administração".
+                Isso garante que ele só será considerado "ativo" quando a URL for
+                exatamente "/admin", e não em sub-rotas como "/admin/history".
+              */}
+              <NavLink to="/admin" end className={({ isActive }) => `${navLinkStyle} ${isActive ? activeNavLinkStyle : ''}`}>
                 <Users size={18} />
                 Administração
               </NavLink>
-              {/* CORREÇÃO: Adicionado o novo link para o Histórico de Atividades */}
+              
               <NavLink to="/admin/history" className={({ isActive }) => `${navLinkStyle} ${isActive ? activeNavLinkStyle : ''}`}>
                 <Clock size={18} />
                 Histórico de Atividades
